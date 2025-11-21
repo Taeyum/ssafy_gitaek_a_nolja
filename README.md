@@ -105,7 +105,7 @@
     *   **프로젝트 구조**: Spring Boot 표준에 맞게 JSP 파일과 정적 리소스(CSS, JS) 파일들을 `src/main/resources` 폴더 하위로 재배치했습니다.
 
 4.  **버그 수정 및 개선**:
-    *   **URL 경로 수정**: 모든 JSP 페이지의 링크를 RESTful URL 형식으로 수정했습니다.
+    *   **URL 경로 수정**: 모든 JSP 페이지의 링크를 RESTful URL 형식으로 수정했습니다
 
 5.  **API 명세서 작성**:
     *   **노션 링크**: https://www.notion.so/2b2af5125192800fad5acf5bab04a860
