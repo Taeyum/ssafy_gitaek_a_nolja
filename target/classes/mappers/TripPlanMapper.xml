@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.exam.model.dao.TripPlanDao">
+
+    <!-- ResultMap for mapping the join query to TripPlan and its PlanItems -->
+    <resultMap id="tripPlanWithItemsResultMap" type="com.ssafy.exam.model.dto.TripPlan">
+        <id property="planId" column="plan_id"/>
+        <result property="title" column="title"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="budget" column="budget"/>
+        <result property="memo" column="memo"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <collection property="items" ofType="com.ssafy.exam.model.dto.TripPlan$PlanItem">
+            <id property="planItemId" column="plan_item_id"/>
+            <result property="orderIndex" column="order_index"/>
+            <result property="placeId" column="place_id"/>
+            <result property="title" column="place_title"/>
+            <result property="address" column="address"/>
+            <result property="day" column="visit_day"/>
+            <result property="startTime" column="start_time"/>
+            <result property="endTime" column="end_time"/>
+            <result property="memo" column="item_memo"/>
+            <result property="mapx" column="mapx"/>
+            <result property="mapy" column="mapy"/>
+            <result property="localId" column="local_id"/>
+        </collection>
+    </resultMap>
+
+    <!-- selectAll from TripPlanDaoImpl -->
+    <select id="selectAll" resultMap="tripPlanWithItemsResultMap">
+        SELECT
+            p.plan_id, p.title, p.start_date, p.end_date, p.budget, p.memo, p.created_at, p.updated_at,
+            i.plan_item_id, i.order_index, i.place_id, i.place_title, i.address, i.visit_day, i.start_time, i.end_time, i.memo AS item_memo,
+            i.mapx, i.mapy, i.local_id
+        FROM
+            trip_plan p
+        LEFT JOIN
+            trip_plan_item i ON p.plan_id = i.plan_id
+        ORDER BY
+            p.plan_id, i.order_index
+    </select>
+
+    <!-- insertPlan from TripPlanDaoImpl -->
+    <insert id="insertPlan" useGeneratedKeys="true" keyProperty="planId" parameterType="com.ssafy.exam.model.dto.TripPlan">
+        INSERT INTO trip_plan (title, start_date, end_date, budget, memo, created_at, updated_at)
+        VALUES (#{title}, #{startDate}, #{endDate}, #{budget}, #{memo}, NOW(), NOW())
+    </insert>
+
+    <!-- updatePlan from TripPlanDaoImpl -->
+    <update id="updatePlan" parameterType="com.ssafy.exam.model.dto.TripPlan">
+        UPDATE trip_plan
+        SET
+            title = #{title},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            budget = #{budget},
+            memo = #{memo},
+            updated_at = NOW()
+        WHERE
+            plan_id = #{planId}
+    </update>
+
+    <!-- deletePlanItems from TripPlanDaoImpl -->
+    <delete id="deletePlanItems" parameterType="int">
+        DELETE FROM trip_plan_item WHERE plan_id = #{planId}
+    </delete>
+
+    <!-- insertPlanItem from TripPlanDaoImpl -->
+    <insert id="insertPlanItem" useGeneratedKeys="true" keyProperty="item.planItemId">
+        INSERT INTO trip_plan_item
+            (plan_id, order_index, place_id, place_title, address, visit_day, start_time, end_time, memo, mapx, mapy, local_id)
+        VALUES
+            (#{planId}, #{item.orderIndex}, #{item.placeId}, #{item.title}, #{item.address}, #{item.day}, #{item.startTime}, #{item.endTime}, #{item.memo}, #{item.mapx}, #{item.mapy}, #{item.localId})
+    </insert>
+
+</mapper>

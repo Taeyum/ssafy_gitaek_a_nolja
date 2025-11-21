@@ -4,22 +4,26 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.ssafy.exam.model.dao.AreaDao;
 import com.ssafy.exam.model.dao.AttractionDao;
 
+@Service
 public class LocalTripDataService {
-    private static final LocalTripDataService INSTANCE = new LocalTripDataService();
 
-    private final AreaDao areaDao = AreaDao.getInstance();
-    private final AttractionDao attractionDao = AttractionDao.getInstance();
+    private final AreaDao areaDao;
+    private final AttractionDao attractionDao;
 
-    private LocalTripDataService() {
+    @Autowired
+    public LocalTripDataService(AreaDao areaDao, AttractionDao attractionDao) {
+        this.areaDao = areaDao;
+        this.attractionDao = attractionDao;
     }
 
-    public static LocalTripDataService getInstance() {
-        return INSTANCE;
-    }
-
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> loadAreas(String areaCode) {
         if (areaCode == null || areaCode.isBlank()) {
             return areaDao.selectSidos();
@@ -32,10 +36,12 @@ public class LocalTripDataService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> loadSigungus(String areaCode) {
         return loadAreas(areaCode);
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> searchAttractions(String areaCode, String sigunguCode,
                                                        String contentTypeId, String pageNo, String numOfRows) {
         Integer area = parseInteger(areaCode);

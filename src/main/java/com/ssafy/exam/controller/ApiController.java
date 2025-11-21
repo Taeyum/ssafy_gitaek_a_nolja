@@ -1,65 +1,47 @@
 ﻿package com.ssafy.exam.controller;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.ssafy.exam.model.service.LocalTripDataService;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+@RestController
+@RequestMapping("/api")
+public class ApiController {
 
-@WebServlet(urlPatterns = {"/api"}, loadOnStartup = 1)
-public class ApiController extends HttpServlet implements ControllerHelper {
-    private static final long serialVersionUID = 1L;
+    private final LocalTripDataService localService;
 
-    private final LocalTripDataService localService = LocalTripDataService.getInstance();
-    private final ObjectMapper om = new ObjectMapper();
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        String action = getActionParameter(req, resp); // 기본 "index"
-        switch (action) {
-            case "areas" -> handleAreas(req, resp);       // 시도 목록 or 시군구 목록
-            case "sigungus" -> handleSigungus(req, resp); // 특정 시도의 시군구
-            case "places" -> handlePlaces(req, resp);     // 관광지 목록
-            case "map" -> forward(req, resp, "/map.jsp");
-            case "index" -> forward(req, resp, "/index.jsp");
-            default -> resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown action: " + action);
-        }
+    @Autowired
+    public ApiController(LocalTripDataService localService) {
+        this.localService = localService;
     }
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        doGet(req, resp);
-    }
-
-    private void handleAreas(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String areaCode = req.getParameter("areaCode");
+    @GetMapping("/areas")
+    public Map<String, Object> handleAreas(@RequestParam(required = false) String areaCode) {
         List<Map<String, Object>> data = localService.loadAreas(areaCode);
-        writeJson(resp, wrapResponse(data));
+        return wrapResponse(data);
     }
 
-    private void handleSigungus(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String areaCode = req.getParameter("areaCode");
+    @GetMapping("/sigungus")
+    public Map<String, Object> handleSigungus(@RequestParam String areaCode) {
         List<Map<String, Object>> data = localService.loadSigungus(areaCode);
-        writeJson(resp, wrapResponse(data));
+        return wrapResponse(data);
     }
 
-    private void handlePlaces(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String areaCode = req.getParameter("areaCode");
-        String sigunguCode = req.getParameter("sigunguCode");
-        String contentTypeId = req.getParameter("contentTypeId");
-        String pageNo = req.getParameter("pageNo");
-        String numOfRows = req.getParameter("numOfRows");
+    @GetMapping("/places")
+    public Map<String, Object> handlePlaces(@RequestParam(required = false) String areaCode,
+                                            @RequestParam(required = false) String sigunguCode,
+                                            @RequestParam(required = false) String contentTypeId,
+                                            @RequestParam(required = false) String pageNo,
+                                            @RequestParam(required = false) String numOfRows) {
         List<Map<String, Object>> data = localService.searchAttractions(areaCode, sigunguCode, contentTypeId, pageNo, numOfRows);
-        writeJson(resp, wrapResponse(data));
+        return wrapResponse(data);
     }
 
     private Map<String, Object> wrapResponse(List<Map<String, Object>> items) {
@@ -72,10 +54,5 @@ public class ApiController extends HttpServlet implements ControllerHelper {
                         )
                 )
         );
-    }
-
-    private void writeJson(HttpServletResponse resp, Object json) throws IOException {
-        resp.setContentType("application/json; charset=UTF-8");
-        om.writeValue(resp.getWriter(), json);
     }
 }

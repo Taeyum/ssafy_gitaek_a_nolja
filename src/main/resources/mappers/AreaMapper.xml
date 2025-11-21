@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.exam.model.dao.AreaDao">
+
+    <select id="selectSidos" resultType="java.util.Map">
+        SELECT
+            sido_code as "code",
+            sido_name as "name"
+        FROM
+            sidos
+        ORDER BY
+            sido_code
+    </select>
+
+    <select id="selectGuguns" parameterType="int" resultType="java.util.Map">
+        SELECT
+            gugun_code as "code",
+            gugun_name as "name"
+        FROM
+            guguns
+        WHERE
+            sido_code = #{sidoCode}
+        ORDER BY
+            gugun_name
+    </select>
+
+</mapper>

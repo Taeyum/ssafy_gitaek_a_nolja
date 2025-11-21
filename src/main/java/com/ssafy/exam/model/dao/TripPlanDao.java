@@ -1,21 +1,20 @@
 ﻿package com.ssafy.exam.model.dao;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
+
+import org.apache.ibatis.annotations.Param;
 
 import com.ssafy.exam.model.dto.TripPlan;
 
 public interface TripPlanDao {
-    void ensureTables();
 
-    int insertPlan(Connection conn, TripPlan plan) throws SQLException;
+    int insertPlan(TripPlan plan);
 
-    void updatePlan(Connection conn, TripPlan plan) throws SQLException;
+    void updatePlan(TripPlan plan);
 
-    void deletePlanItems(Connection conn, int planId) throws SQLException;
+    void deletePlanItems(int planId);
 
-    void insertPlanItem(Connection conn, int planId, TripPlan.PlanItem item) throws SQLException;
+    void insertPlanItem(@Param("planId") int planId, @Param("item") TripPlan.PlanItem item);
 
-    List<TripPlan> selectAll(Connection conn) throws SQLException;
+    List<TripPlan> selectAll();
 }

@@ -107,6 +107,75 @@ COLLATE = utf8mb4_0900_ai_ci
 comment '명소정보테이블';
 
 
+-- -----------------------------------------------------
+-- Table `ssafy_trip`.`Member`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `ssafy_trip`.`Member` ;
+
+CREATE TABLE IF NOT EXISTS `ssafy_trip`.`Member` (
+  `mno` INT NOT NULL AUTO_INCREMENT COMMENT '회원번호',
+  `name` VARCHAR(100) NOT NULL COMMENT '이름',
+  `email` VARCHAR(100) NOT NULL COMMENT '이메일',
+  `password` VARCHAR(255) NOT NULL COMMENT '비밀번호',
+  `role` VARCHAR(50) NULL DEFAULT 'USER' COMMENT '역할',
+  PRIMARY KEY (`mno`),
+  UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_0900_ai_ci
+COMMENT = '회원정보테이블';
+
+
+-- -----------------------------------------------------
+-- Table `ssafy_trip`.`trip_plan`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `ssafy_trip`.`trip_plan` ;
+
+CREATE TABLE IF NOT EXISTS `ssafy_trip`.`trip_plan` (
+  `plan_id` INT NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(200) NOT NULL,
+  `start_date` DATE NULL,
+  `end_date` DATE NULL,
+  `budget` VARCHAR(50) NULL,
+  `memo` TEXT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`plan_id`))
+ENGINE = InnoDB
+COMMENT = '여행계획테이블';
+
+
+-- -----------------------------------------------------
+-- Table `ssafy_trip`.`trip_plan_item`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `ssafy_trip`.`trip_plan_item` ;
+
+CREATE TABLE IF NOT EXISTS `ssafy_trip`.`trip_plan_item` (
+  `plan_item_id` INT NOT NULL AUTO_INCREMENT,
+  `plan_id` INT NOT NULL,
+  `order_index` INT NOT NULL,
+  `place_id` VARCHAR(50) NULL,
+  `place_title` VARCHAR(200) NULL,
+  `address` VARCHAR(200) NULL,
+  `visit_day` DATE NULL,
+  `start_time` VARCHAR(10) NULL,
+  `end_time` VARCHAR(10) NULL,
+  `memo` TEXT NULL,
+  `mapx` DOUBLE NULL,
+  `mapy` DOUBLE NULL,
+  `local_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`plan_item_id`),
+  INDEX `fk_trip_plan_item_plan_idx` (`plan_id` ASC) VISIBLE,
+  CONSTRAINT `fk_trip_plan_item_plan`
+    FOREIGN KEY (`plan_id`)
+    REFERENCES `ssafy_trip`.`trip_plan` (`plan_id`)
+    ON DELETE CASCADE)
+ENGINE = InnoDB
+COMMENT = '여행계획항목테이블';
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+

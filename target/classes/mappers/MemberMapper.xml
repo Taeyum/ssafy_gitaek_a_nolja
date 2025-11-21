@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.exam.model.dao.MemberDao">
+
+    <resultMap id="memberResultMap" type="com.ssafy.exam.model.dto.Member">
+        <id property="mno" column="mno"/>
+        <result property="name" column="name"/>
+        <result property="email" column="email"/>
+        <result property="password" column="password"/>
+        <result property="role" column="role"/>
+    </resultMap>
+
+    <insert id="registMember" parameterType="com.ssafy.exam.model.dto.Member">
+        INSERT INTO Member (name, email, password, role)
+        VALUES (#{name}, #{email}, #{password}, 'USER')
+    </insert>
+
+    <select id="existMemberIdPassword" resultMap="memberResultMap">
+        SELECT * FROM Member WHERE name = #{name} AND password = #{password}
+    </select>
+
+    <select id="selectAllMembers" resultMap="memberResultMap">
+        SELECT * FROM Member
+    </select>
+
+    <select id="getMember" resultMap="memberResultMap" parameterType="string">
+        SELECT * FROM Member WHERE email = #{email}
+    </select>
+
+    <update id="modifyMember" parameterType="com.ssafy.exam.model.dto.Member">
+        UPDATE Member
+        SET name = #{name}, password = #{password}
+        WHERE email = #{email}
+    </update>
+
+    <delete id="removeMember" parameterType="string">
+        DELETE FROM Member WHERE email = #{email}
+    </delete>
+
+    <select id="findPassword" resultType="string">
+        SELECT password FROM Member WHERE email = #{email} AND name = #{name}
+    </select>
+
+</mapper>

@@ -1,4 +1,4 @@
-﻿# Trip Backend
+# Trip Backend
 
 ## 주요 기능
 - 회원 관리: 회원가입, 로그인, 비밀번호 찾기, 정보 수정/탈퇴, remember-me 쿠키 처리
@@ -82,3 +82,31 @@
 - **Chat_Room**: 각 여행계획에 1:1로 매핑되는 채팅방 정보를 저장해, 여행별 채팅 공간을 구분합니다.
 - **Trip_Participant**: 어떤 사용자가 어떤 여행에 참가했는지 M:N 관계를 풀어주는 참가자 매핑 테이블입니다.
 - **Chat_Message**: 채팅방에서 누가, 언제, 어떤 내용을 보냈는지 메시지 단위로 기록하는 로그 테이블입니다.
+
+---
+
+## 프로젝트 현대화 마이그레이션 요약
+
+이 프로젝트는 기존의 전통적인 서블릿/JSP/JDBC 구조에서 최신 Spring Boot 기반 아키텍처로 성공적으로 마이그레이션되었습니다.
+
+### 주요 변경 사항
+
+1.  **Spring Boot 전환**:
+    *   **빌드 시스템**: `pom.xml`을 Spring Boot Starter 의존성을 사용하도록 업데이트하여 구성을 간소화하고, 실행 가능한 `.jar` 파일로 빌드되도록 변경했습니다.
+    *   **내장 서버**: 이제 별도의 Tomcat 서버 없이 `main` 메소드를 실행하여 내장된 서버로 애플리케이션을 구동할 수 있습니다.
+
+2.  **백엔드 리팩토링**:
+    *   **Controller**: 모든 서블릿(`HttpServlet`)을 Spring MVC의 `@Controller` 및 `@RestController`로 전환했습니다.
+    *   **Service**: 모든 서비스 클래스를 `@Service` 어노테이션을 사용하여 Spring의 트랜잭션 관리 기능(`@Transactional`)을 적용했습니다.
+    *   **Data Access Layer**: 기존의 수동 JDBC 코드를 모두 제거하고, `MyBatis`를 도입하여 DAO 인터페이스와 Mapper XML로 데이터를 처리하도록 변경했습니다.
+
+3.  **설정 및 구조 변경**:
+    *   **설정 간소화**: `web.xml`, Java 기반 설정 파일 등 복잡한 설정들을 제거하고, `application.properties` 파일로 설정을 통합했습니다.
+    *   **프로젝트 구조**: Spring Boot 표준에 맞게 JSP 파일과 정적 리소스(CSS, JS) 파일들을 `src/main/resources` 폴더 하위로 재배치했습니다.
+
+4.  **버그 수정 및 개선**:
+    *   **URL 경로 수정**: 모든 JSP 페이지의 링크를 RESTful URL 형식으로 수정했습니다.
+
+5.  **API 명세서 작성**:
+    *   **노션 링크**: https://www.notion.so/2b2af5125192800fad5acf5bab04a860
+

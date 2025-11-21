@@ -1,63 +1,58 @@
 ﻿package com.ssafy.exam.controller;
 
-import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
 import com.ssafy.exam.model.dto.TripPlan;
 import com.ssafy.exam.model.service.TripPlanService;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+@Controller
+@RequestMapping("/plan")
+public class TripPlanController {
 
-@WebServlet(urlPatterns = "/plan", loadOnStartup = 1)
-public class TripPlanController extends HttpServlet implements ControllerHelper {
-    private static final long serialVersionUID = 1L;
+    private final TripPlanService tripPlanService;
 
-    private final TripPlanService service = TripPlanService.getInstance();
-    private final ObjectMapper mapper = new ObjectMapper();
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        String action = getActionParameter(req, resp);
-        switch (action) {
-        case "list-json" -> writePlanList(resp);
-        case "plan-form", "index" -> forward(req, resp, "/plan.jsp");
-        default -> forward(req, resp, "/plan.jsp");
-        }
+    @Autowired
+    public TripPlanController(TripPlanService tripPlanService) {
+        this.tripPlanService = tripPlanService;
     }
 
-    private void writePlanList(HttpServletResponse resp) throws IOException {
-        resp.setContentType("application/json; charset=UTF-8");
-        mapper.writeValue(resp.getWriter(), service.findAll());
+    @GetMapping(value = { "", "/", "/index", "/plan-form" })
+    public String showPlanPage() {
+        // ViewResolver가 "plan"을 "/plan.jsp"로 변환해줍니다.
+        return "plan";
     }
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        String action = getActionParameter(req, resp);
-        switch (action) {
-        case "save-plan" -> savePlan(req, resp);
-        default -> resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Unsupported action: " + action);
-        }
-    }
-
-    private void savePlan(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        req.setCharacterEncoding("UTF-8");
-        TripPlan plan = mapper.readValue(req.getReader(), TripPlan.class);
+    @GetMapping("/list-json")
+    @ResponseBody
+    public ResponseEntity<List<TripPlan>> getPlanList() {
         try {
-            TripPlan saved = service.save(plan);
-            resp.setContentType("application/json; charset=UTF-8");
-            mapper.writeValue(resp.getWriter(), Map.of("planId", saved.getPlanId()));
-        } catch (RuntimeException e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.setContentType("application/json; charset=UTF-8");
-            mapper.writeValue(resp.getWriter(), Map.of(
-                    "error", e.getMessage() != null ? e.getMessage() : "Failed to save trip plan"));
+            List<TripPlan> plans = tripPlanService.findAll();
+            return ResponseEntity.ok(plans);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/save-plan")
+    public ResponseEntity<Map<String, Object>> savePlan(@RequestBody TripPlan plan) {
+        try {
+            TripPlan savedPlan = tripPlanService.save(plan);
+            return ResponseEntity.ok(Map.of("planId", savedPlan.getPlanId()));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to save trip plan"));
         }
     }
 }

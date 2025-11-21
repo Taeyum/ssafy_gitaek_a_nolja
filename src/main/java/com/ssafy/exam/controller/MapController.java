@@ -1,28 +1,14 @@
 package com.ssafy.exam.controller;
 
-import java.io.IOException;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+@Controller
+public class MapController {
 
-@WebServlet("/map")
-public class MapController extends HttpServlet {
-	private static final long serialVersionUID = 1L;
-
-	@Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        // JSP로 포워드
-        request.getRequestDispatcher("/map.jsp").forward(request, response);
+    @GetMapping("/map")
+    public String showMapPage() {
+        return "map"; // ViewResolver가 /map.jsp로 변환합니다.
     }
-	
-	@Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		super.doPost(req, resp);
-	}
 
 }
