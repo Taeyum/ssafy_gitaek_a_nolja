@@ -115,22 +115,24 @@
 
 1. 기능
 
-랜딩 페이지: 시작하기 버튼으로 대시보드 진입.
+  랜딩 페이지: 시작하기 버튼으로 대시보드 진입.
 
-지도(Map): 카카오맵 연동, 검색 시 이동(moveCamera).
+  지도(Map): 카카오맵 연동, 검색 시 이동(moveCamera).
 
-검색: 가짜 데이터 검색 -> 리스트 출력 -> [추가] 버튼 시 모달 오픈.
+  검색: 가짜 데이터 검색 -> 리스트 출력 -> [추가] 버튼 시 모달 오픈.
 
-일정 추가: 모달에서 날짜/시간 선택 -> Pinia Store 저장 -> 자동 정렬.
+  일정 추가: 모달에서 날짜/시간 선택 -> Pinia Store 저장 -> 자동 정렬.
 
-일정 관리: 드래그 앤 드롭으로 순서 변경, 삭제 기능.
+  일정 관리: 드래그 앤 드롭으로 순서 변경, 삭제 기능.
 
-권한: 수정 권한 요청/완료 로직 (UI 제어).
+  권한: 수정 권한 요청/완료 로직 (UI 제어).
 
-구조 (Pinia 도입 완료):
+  구조 (Pinia 도입 완료):
 
-tripStore.js가 중앙 관제탑 역할을 하며 데이터(itinerary)를 잡고 있습니다.
+  tripStore.js가 중앙 관제탑 역할을 하며 데이터(itinerary)를 잡고 있습니다.
 
-PlanningDashboard.vue(입력)와 ItineraryList.vue(출력)는 서로 직접 대화하지 않고 Store를 통해서만 소통합니다.
+  PlanningDashboard.vue(입력)와 ItineraryList.vue(출력)는 서로 직접 대화하지 않고 Store를 통해서만 소통합니다.
 
-Front-end 작성 중 입니다. 기존의 front는 사용하지 않을 예정입니다.
+  Front-end 작성 중 입니다. 기존의 front는 사용하지 않을 예정입니다.
+
+  해당 결과물은 현재 gitaek-anolja-front.zip 에 담겨있습니다.
