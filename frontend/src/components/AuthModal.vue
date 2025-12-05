@@ -25,24 +25,30 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 
-// 폼 제출 핸들러
-const handleSubmit = () => {
+const handleSubmit = async () => { // ★ async 추가
   if (mode.value === 'login') {
     // 로그인 시도
-    userStore.login(email.value, password.value)
-    alert(`${userStore.userInfo.name}님 환영합니다!`)
+    const success = await userStore.login(email.value, password.value) // ★ await 추가
+    
+    if (success) {
+      alert(`${userStore.userInfo.name}님 환영합니다!`)
+      emit('close') // 성공했을 때만 닫기
+      // 입력창 초기화
+      name.value = ''
+      email.value = ''
+      password.value = ''
+    }
   } else {
     // 회원가입 시도
     if (!name.value) return alert('이름을 입력해주세요.')
-    userStore.signup(name.value, email.value, password.value)
-    alert('회원가입이 완료되었습니다!')
+    
+    const success = await userStore.signup(name.value, email.value, password.value) // ★ await 추가
+    
+    if (success) {
+      alert('회원가입이 완료되었습니다! 로그인해주세요.')
+      mode.value = 'login' // 회원가입 성공하면 로그인 창으로 전환
+    }
   }
-  
-  // 모달 닫기 및 초기화
-  emit('close')
-  name.value = ''
-  email.value = ''
-  password.value = ''
 }
 
 // 모드 전환 (로그인 <-> 회원가입)

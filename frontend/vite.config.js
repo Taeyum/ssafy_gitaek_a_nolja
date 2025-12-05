@@ -1,5 +1,4 @@
 import { fileURLToPath, URL } from 'node:url'
-
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -15,4 +14,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080', // 백엔드(Spring Boot) 주소
+        changeOrigin: true,
+        // 백엔드 Controller에 @RequestMapping("/api/...")가 붙어있으므로
+        // '/api'를 지우는 rewrite 옵션은 필요 없습니다.
+      }
+    }
+  }
 })

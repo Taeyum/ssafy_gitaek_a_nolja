@@ -3,7 +3,16 @@ import { ref } from 'vue'
 import LandingPage from '@/views/LandingPage.vue'
 import PlanningDashboard from '@/views/PlanningDashboard.vue'
 import MyPage from '@/views/MyPage.vue'
+import { onMounted } from 'vue' // 추가
+import { useUserStore } from '@/stores/userStore' // 추가
 
+
+const userStore = useUserStore()
+
+// 앱이 시작될 때 로그인 상태 확인
+onMounted(() => {
+  userStore.checkLoginStatus()
+})
 // 현재 화면 상태 ('landing' 또는 'planning')
 const currentView = ref('landing')
 </script>
