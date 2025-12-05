@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>기택 아놀자 (RESTful Ver)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f4f9; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .card { background: white; width: 320px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); height: fit-content; }
+        h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-blue { background-color: #007bff; }
+        .btn-green { background-color: #28a745; }
+        .btn-red { background-color: #dc3545; }
+        .btn-info { background-color: #17a2b8; }
+        .btn-gray { background-color: #6c757d; }
+        .result { margin-top: 10px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; min-height: 20px; word-break: break-all; }
+        label { font-size: 0.9em; color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>👶 1. 회원가입</h3>
+        <input type="text" id="joinEmail" placeholder="이메일">
+        <input type="password" id="joinPw" placeholder="비밀번호">
+        <input type="text" id="joinNick" placeholder="닉네임">
+        <button class="btn-blue" onclick="doSignup()">가입하기 (POST)</button>
+        <div id="joinResult" class="result">대기 중...</div>
+    </div>
+
+    <div class="card">
+        <h3>🔑 2. 로그인</h3>
+        <input type="text" id="loginEmail" placeholder="이메일">
+        <input type="password" id="loginPw" placeholder="비밀번호">
+        <div style="margin-top:5px;"><input type="checkbox" id="rememberId" style="width:auto;"> <label for="rememberId">아이디 기억하기</label></div>
+        <button class="btn-green" onclick="doLogin()">로그인하기 (POST)</button>
+        <div id="loginResult" class="result">대기 중...</div>
+    </div>
+
+    <div class="card">
+        <h3>🛡️ 3. 내 정보 (세션)</h3>
+        <button class="btn-info" onclick="getMyInfo()">📑 정보 조회 (GET /me)</button>
+        <button class="btn-red" onclick="doLogout()">🚪 로그아웃 (POST)</button>
+        <div id="sessionResult" class="result">대기 중...</div>
+    </div>
+
+    <div class="card">
+        <h3>❓ 4. 비밀번호 찾기</h3>
+        <input type="text" id="findEmail" placeholder="이메일">
+        <input type="text" id="findNick" placeholder="닉네임">
+        <button class="btn-gray" onclick="findPw()">임시 비번 발급</button>
+        <div id="findResult" class="result">대기 중...</div>
+    </div>
+
+    <div class="card">
+        <h3>🔒 5. 비밀번호 변경</h3>
+        <input type="password" id="currPw" placeholder="현재 비밀번호">
+        <input type="password" id="newPw" placeholder="새 비밀번호">
+        <button class="btn-info" onclick="changePw()">변경하기 (PUT)</button>
+        <div id="changePwResult" class="result">대기 중...</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const rememberEmail = getCookie("rememberEmail");
+            if (rememberEmail) {
+                document.getElementById("loginEmail").value = rememberEmail;
+                document.getElementById("rememberId").checked = true;
+            }
+        }
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // [1] 회원가입
+        async function doSignup() {
+            const data = {
+                email: document.getElementById('joinEmail').value,
+                password: document.getElementById('joinPw').value,
+                nickname: document.getElementById('joinNick').value
+            };
+            callApi('/api/users', 'POST', data, 'joinResult');
+        }
+
+        // [2] 로그인
+        async function doLogin() {
+            const data = {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPw').value,
+                rememberId: document.getElementById('rememberId').checked
+            };
+            await callApi('/api/users/login', 'POST', data, 'loginResult');
+            // 로그인 성공 시 쿠키 확인을 위해 새로고침 (1.5초 뒤)
+            setTimeout(() => location.reload(), 1500);
+        }
+
+        // [3] 내 정보 조회
+        async function getMyInfo() {
+            callApi('/api/users/me', 'GET', null, 'sessionResult');
+        }
+
+        // [3-2] 로그아웃
+        async function doLogout() {
+            callApi('/api/users/logout', 'POST', null, 'sessionResult');
+        }
+
+        // [4] 비밀번호 찾기
+        async function findPw() {
+            const data = {
+                email: document.getElementById('findEmail').value,
+                nickname: document.getElementById('findNick').value
+            };
+            callApi('/api/users/password-recovery', 'POST', data, 'findResult');
+        }
+
+        // [5] 비밀번호 변경
+        async function changePw() {
+            const data = {
+                currentPassword: document.getElementById('currPw').value,
+                newPassword: document.getElementById('newPw').value
+            };
+            callApi('/api/users/password', 'PUT', data, 'changePwResult');
+        }
+
+        // 공통 API 함수
+        async function callApi(url, method, data, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            const options = { method: method, headers: { 'Content-Type': 'application/json' } };
+            if (data) options.body = JSON.stringify(data);
+
+            try {
+                const response = await fetch(url, options);
+                const text = await response.text();
+                if (response.ok) {
+                    try {
+                        const json = JSON.parse(text);
+                        resultDiv.innerHTML = `<span style="color:green; font-weight:bold;">✅ 성공</span><br><pre>${JSON.stringify(json, null, 2)}</pre>`;
+                    } catch(e) {
+                        resultDiv.innerHTML = `<span style="color:green; font-weight:bold;">✅ ${text}</span>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<span style="color:red; font-weight:bold;">💥 실패 (${response.status})</span><br>${text}`;
+                }
+            } catch (error) {
+                console.error(error);
+                resultDiv.innerHTML = '<span style="color:red;">❌ 서버 연결 실패</span>';
+            }
+        }
+    </script>
+</body>
+</html>
