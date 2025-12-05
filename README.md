@@ -72,25 +72,31 @@ Front-end 작성 중 입니다. 기존의 front는 사용하지 않을 예정입
 1. 기능 (Feature)
 
 회원가입: `POST /api/users` 구현, DTO를 통해 필수 정보(이메일, 비번, 닉네임)만 수신 및 DB 저장.
-로그인: `POST /api/users/login` 구현.
-  - 세션(Session): `HttpSession`을 활용하여 서버 측 로그인 상태 유지.
-  - 쿠키(Cookie): '아이디 기억하기' 체크 시 7일간 유지되는 쿠키 발급 로직 추가.
+
+로그인: `POST /api/users/login` 구현 - 아이디 기억하기 구현.
+
 내 정보 조회: `GET /api/users/me` 구현. 세션에 저장된 `loginUser` 객체를 통해 본인 정보 반환.
+
 로그아웃: `POST /api/users/logout` 구현. 세션 무효화(`invalidate`) 처리.
-비밀번호 관리:
-  - 찾기: 이메일/닉네임 검증 후 임시 비밀번호 발급 로직.
-  - 변경: `PUT /api/users/password` 구현. 기존 비밀번호 확인 후 새 비밀번호로 업데이트.
+
+비밀번호 관리 찾기: 이메일/닉네임 검증 후 임시 비밀번호 발급 로직. 변경: `PUT /api/users/password` 구현. 기존 비밀번호 확인 후 새 비밀번호로 업데이트.
+
 중복 체크: 이메일 중복 여부 확인 API 구현.
 
 2. 구조 및 기술 (Structure & Tech)
 
 RESTful API 리팩토링: 기존 `/api/user/signup` 등의 URL을 자원 중심의 `/api/users` (복수형) 및 HTTP Method(`POST`, `PUT`)로 전면 재설계.
+
 DTO 패턴 도입 (Security): `UserDto` 하나로 통일하지 않고, `UserLoginRequest`, `UserSignupRequest` 등으로 클래스를 세분화하여 오버포스팅 방지 및 보안 강화.
+
 DB 스키마 최적화: `Users` 테이블 등 모든 테이블에 `AUTO_INCREMENT` 누락 수정 및 테이블 생성 순서 재정립.
+
 CORS 설정: Vue.js 연동을 대비하여 `WebMvcConfig` 도입. `allowCredentials(true)` 설정을 통해 세션/쿠키 통신 허용.
 
 3. 테스트 및 현황 (Status)
 
 Postman 설치 이슈 대안으로(박기택 노트북에 윈도우 버전이 안맞아서 설치가 안 됨) `static/index.html` 및 Talend API Tester 자체 테스트 페이지 구축 완료.
+
 [가입] → [로그인] → [세션 확인] → [비번 변경] → [로그아웃]으로 이어지는 전체 시나리오 테스트 통과 (100% 완료).
+
 현재 결과물은 백엔드 프로젝트(`gitaek`)에 반영되어 있으며, 바로 프론트엔드와 연동 가능한 상태입니다.
