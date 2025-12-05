@@ -66,7 +66,7 @@ Front-end 작성 중 입니다. 기존의 front는 사용하지 않을 예정입
 
 해당 결과물은 현재 gitaek-anolja-front.zip 에 담겨있습니다.
 
-### 12월 1일 ~ 12월 5일 백엔드 개발 사항 (User Module)
+### 12월 1일 ~ 12월 5일 백엔드_로그인_관련 주요 변경 사항
 
 
 1. 기능 (Feature)
