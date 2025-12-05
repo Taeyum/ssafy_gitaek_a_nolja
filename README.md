@@ -71,32 +71,26 @@ Front-end 작성 중 입니다. 기존의 front는 사용하지 않을 예정입
 
 1. 기능 (Feature)
 
-회원가입: `POST /api/users` 구현, DTO를 통해 필수 정보(이메일, 비번, 닉네임)만 수신 및 DB 저장.
-
-로그인: `POST /api/users/login` 구현 - 아이디 기억하기 구현.
-
-내 정보 조회: `GET /api/users/me` 구현. 세션에 저장된 `loginUser` 객체를 통해 본인 정보 반환.
-
-로그아웃: `POST /api/users/logout` 구현. 세션 무효화(`invalidate`) 처리.
-
-비밀번호 관리 찾기: 이메일/닉네임 검증 후 임시 비밀번호 발급 로직. 변경: `PUT /api/users/password` 구현. 기존 비밀번호 확인 후 새 비밀번호로 업데이트.
-
-중복 체크: 이메일 중복 여부 확인 API 구현.
+회원가입, 로그인 (아이디 기억하기 구현.), 내 정보 조회, 로그아웃, 비밀번호 관리 찾기, 임시 비밀번호 발급 및 변경
 
 2. 구조 및 기술 (Structure & Tech)
 
-RESTful API 리팩토링: 기존 `/api/user/signup` 등의 URL을 자원 중심의 `/api/users` (복수형) 및 HTTP Method(`POST`, `PUT`)로 전면 재설계.
+RESTful API 리팩토링: 기존 '/api/user/signup' 등의 URL을 자원 중심의 '/api/users' (복수형) 및 HTTP Method('POST', 'PUT')로 전면 재설계.
 
-DTO 패턴 도입 (Security): `UserDto` 하나로 통일하지 않고, `UserLoginRequest`, `UserSignupRequest` 등으로 클래스를 세분화하여 오버포스팅 방지 및 보안 강화.
+DTO 패턴 도입 (Security): 'UserDto' 하나로 통일하지 않고, 'UserLoginRequest', 'UserSignupRequest' 등으로 클래스를 세분화하여 오버포스팅 방지 및 보안 강화.
+이유: 로그인이나 가입마다 필요한 데이터와 검증 규칙이 다른데, 하나로 몽뚤그리면 불필요한 데이터 노출로 인해 해킹 위험이 생길 수도 있고,  코드 수정시 범용성을 고려하여 유지보수를 위함.
 
-DB 스키마 최적화: `Users` 테이블 등 모든 테이블에 `AUTO_INCREMENT` 누락 수정 및 테이블 생성 순서 재정립.
+model폴더 내 User를  따로 둔 이유
+이유: Model은 DB 테이블과 100% 똑같은 '원본'이라 함부로 건드리면 안 되고, DTO는 화면 요구사항에 따라 막 변해도 되는 포장지 역할을 하기에 분리함.
 
-CORS 설정: Vue.js 연동을 대비하여 `WebMvcConfig` 도입. `allowCredentials(true)` 설정을 통해 세션/쿠키 통신 허용.
+CORS 설정: Vue.js 연동을 대비하여 'WebMvcConfig' 도입.
 
 3. 테스트 및 현황 (Status)
 
-Postman 설치 이슈 대안으로(박기택 노트북에 윈도우 버전이 안맞아서 설치가 안 됨) `static/index.html` 및 Talend API Tester 자체 테스트 페이지 구축 완료.
+Postman 설치 이슈 대안으로(박기택 노트북에 윈도우 버전이 안맞아서 설치가 안 됨) 'static/index.html' 및 Talend API Tester 자체 테스트 페이지 구축 완료.
 
 [가입] → [로그인] → [세션 확인] → [비번 변경] → [로그아웃]으로 이어지는 전체 시나리오 테스트 통과 (100% 완료).
 
-현재 결과물은 백엔드 프로젝트(`gitaek`)에 반영되어 있으며, 바로 프론트엔드와 연동 가능한 상태입니다.
+
+4. Vue.js와 최초 연결 성공
+: 기존 작업자의 컴퓨터에서 포트번호가 달라서 오류가 떴었으나 이후 포트번호만 'resoureces/application.properties'에서 변경하니 오류없이 로그인, 회원가입, 로그아웃 등 동작 정상작동 확인. 
