@@ -78,9 +78,11 @@ Front-end 작성 중 입니다. 기존의 front는 사용하지 않을 예정입
 RESTful API 리팩토링: 기존 '/api/user/signup' 등의 URL을 자원 중심의 '/api/users' (복수형) 및 HTTP Method('POST', 'PUT')로 전면 재설계.
 
 DTO 패턴 도입 (Security): 'UserDto' 하나로 통일하지 않고, 'UserLoginRequest', 'UserSignupRequest' 등으로 클래스를 세분화하여 오버포스팅 방지 및 보안 강화.
+
 이유: 로그인이나 가입마다 필요한 데이터와 검증 규칙이 다른데, 하나로 몽뚤그리면 불필요한 데이터 노출로 인해 해킹 위험이 생길 수도 있고,  코드 수정시 범용성을 고려하여 유지보수를 위함.
 
-model폴더 내 User를  따로 둔 이유
+model폴더 내 User를  따로 둚.
+
 이유: Model은 DB 테이블과 100% 똑같은 '원본'이라 함부로 건드리면 안 되고, DTO는 화면 요구사항에 따라 막 변해도 되는 포장지 역할을 하기에 분리함.
 
 CORS 설정: Vue.js 연동을 대비하여 'WebMvcConfig' 도입.
