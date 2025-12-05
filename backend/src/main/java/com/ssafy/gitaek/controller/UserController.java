@@ -10,16 +10,15 @@ import org.springframework.web.bind.annotation.*;
 
 import com.ssafy.gitaek.model.User;
 import com.ssafy.gitaek.service.UserService;
-import com.ssafy.gitaek.dto.*; // 모든 DTO 임포트
+import com.ssafy.gitaek.dto.*;
 
 @RestController
-@RequestMapping("/api/users") // ★ RESTful: 복수형 사용
+@RequestMapping("/api/users")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
-    // [1] 회원가입: POST /api/users
     @PostMapping
     public ResponseEntity<?> signup(@RequestBody UserSignupRequest signupDto) {
         try {
@@ -31,17 +30,16 @@ public class UserController {
         }
     }
 
-    // [2] 로그인: POST /api/users/login
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UserLoginRequest loginDto, 
-                                   HttpSession session, 
+    public ResponseEntity<?> login(@RequestBody UserLoginRequest loginDto,
+                                   HttpSession session,
                                    HttpServletResponse response) {
-        
+
         User user = userService.login(loginDto.getEmail(), loginDto.getPassword());
 
         if (user != null) {
             session.setAttribute("loginUser", user);
-            
+
             Cookie cookie = new Cookie("rememberEmail", loginDto.getEmail());
             if (loginDto.isRememberId()) {
                 cookie.setMaxAge(60 * 60 * 24 * 7);
@@ -59,15 +57,12 @@ public class UserController {
         }
     }
 
-    // [3] 로그아웃: POST /api/users/logout
-    // ★ GET 아님! 상태를 변경하므로 POST 사용
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpSession session) {
-        session.invalidate(); 
+        session.invalidate();
         return new ResponseEntity<>("로그아웃 되었습니다.", HttpStatus.OK);
     }
 
-    // [4] 내 정보 조회: GET /api/users/me
     @GetMapping("/me")
     public ResponseEntity<?> getUserInfo(HttpSession session) {
         User loginUser = (User) session.getAttribute("loginUser");
@@ -78,8 +73,7 @@ public class UserController {
             return new ResponseEntity<>("로그인 정보가 없습니다.", HttpStatus.UNAUTHORIZED);
         }
     }
-    
-    // [5] 이메일 중복 체크: GET /api/users/check-email?email=...
+
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmail(@RequestParam String email) {
         boolean exists = userService.isEmailExists(email);
@@ -90,7 +84,6 @@ public class UserController {
         }
     }
 
-    // [6] 비밀번호 찾기: POST /api/users/password-recovery
     @PostMapping("/password-recovery")
     public ResponseEntity<?> findPw(@RequestBody UserFindPwRequest request) {
         String tempPw = userService.findPassword(request.getEmail(), request.getNickname());
@@ -102,8 +95,6 @@ public class UserController {
         }
     }
 
-    // [7] 비밀번호 변경: PUT /api/users/password
-    // ★ 추가된 부분 (정보 수정이므로 PUT)
     @PutMapping("/password")
     public ResponseEntity<?> changePw(@RequestBody UserChangePwRequest request, HttpSession session) {
         User loginUser = (User) session.getAttribute("loginUser");
@@ -111,8 +102,8 @@ public class UserController {
             return new ResponseEntity<>("로그인이 필요합니다.", HttpStatus.UNAUTHORIZED);
         }
 
-        boolean result = userService.changePassword(loginUser.getUserId(), 
-                                                    request.getCurrentPassword(), 
+        boolean result = userService.changePassword(loginUser.getUserId(),
+                                                    request.getCurrentPassword(),
                                                     request.getNewPassword());
 
         if (result) {
