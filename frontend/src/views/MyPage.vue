@@ -3,13 +3,14 @@ import { defineEmits } from 'vue'
 import { ArrowLeft, User, Mail, MapPin, Calendar, LogOut } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/userStore'
 
-const emit = defineEmits(['back'])
+// 'go-edit' 이벤트 추가됨
+const emit = defineEmits(['back', 'go-edit'])
 const userStore = useUserStore()
 
 const handleLogout = () => {
   if (confirm('정말 로그아웃 하시겠습니까?')) {
     userStore.logout()
-    emit('back') // 로그아웃 후 메인으로 이동
+    emit('back') 
   }
 }
 </script>
@@ -38,7 +39,9 @@ const handleLogout = () => {
               class="w-32 h-32 rounded-full border-4 border-white bg-white shadow-md object-cover"
               alt="Profile"
             />
+            
             <button 
+              @click="emit('go-edit')"
               class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors"
             >
               프로필 수정
@@ -83,20 +86,6 @@ const handleLogout = () => {
           <div class="flex items-center gap-2 text-sm text-gray-600">
             <MapPin class="w-4 h-4" />
             제주도 서귀포시 외 5곳
-          </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h4 class="font-bold text-lg text-gray-900">부산 먹방 투어</h4>
-              <p class="text-sm text-gray-500">2023.12.24 - 2023.12.25</p>
-            </div>
-            <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">완료됨</span>
-          </div>
-          <div class="flex items-center gap-2 text-sm text-gray-600">
-            <MapPin class="w-4 h-4" />
-            부산 해운대구 외 8곳
           </div>
         </div>
       </div>

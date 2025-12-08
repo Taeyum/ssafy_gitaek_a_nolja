@@ -20,4 +20,10 @@ public interface UserMapper {
 	User selectUserByEmailAndNick(@Param("email") String email, @Param("nickname") String nickname);
 
 	int updatePassword(User user);
+
+	// 닉네임 중복 체크
+	int checkNicknameExists(String nickname);
+
+	// 회원 탈퇴
+	int deleteUser(int userId);
 }

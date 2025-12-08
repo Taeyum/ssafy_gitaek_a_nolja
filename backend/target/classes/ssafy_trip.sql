@@ -7,9 +7,17 @@ CREATE TABLE Users (
     email       VARCHAR(255) NOT NULL UNIQUE,
     password    VARCHAR(255) NOT NULL,
     nickname    VARCHAR(100) NOT NULL,
+    role        VARCHAR(20) DEFAULT 'ROLE_USER', -- ★ 추가됨 (ROLE_USER, ROLE_ADMIN)
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+<<<<<<< HEAD
+-- [방법 2] 이미 테이블이 있다면 (이거 실행):
+ALTER TABLE Users ADD COLUMN role VARCHAR(20) DEFAULT 'ROLE_USER';
+
+-- [2] 지역 (Region)
+=======
+>>>>>>> b4014e7a4cba316cdf9c5536248f3c8e5c92d9e3
 CREATE TABLE Region (
     region_id   INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,

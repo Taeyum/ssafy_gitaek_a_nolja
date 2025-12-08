@@ -56,4 +56,23 @@ public class UserService {
 		return true;
 	}
 
+	// [추가] 닉네임 중복 체크
+	public boolean isNicknameExists(String nickname) {
+		return userMapper.checkNicknameExists(nickname) > 0;
+	}
+
+	// [추가] 회원 정보 수정
+	public void updateUserInfo(User user) {
+		userMapper.updateUser(user);
+	}
+
+	// [추가] 회원 탈퇴 (비밀번호 확인 포함)
+	public boolean deleteUser(int userId, String password) {
+		User user = userMapper.selectUserById(userId);
+		if (user != null && user.getPassword().equals(password)) {
+			userMapper.deleteUser(userId);
+			return true;
+		}
+		return false;
+	}
 }

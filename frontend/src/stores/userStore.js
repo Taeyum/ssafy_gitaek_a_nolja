@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { loginApi, signupApi, logoutApi, getUserInfoApi } from '@/api/user'
+import { loginApi, signupApi, logoutApi, getUserInfoApi, checkNicknameApi, updateUserApi, changePasswordApi, deleteUserApi } from '@/api/user'
 
 export const useUserStore = defineStore('user', () => {
   // 1. 상태
@@ -32,6 +32,8 @@ export const useUserStore = defineStore('user', () => {
       alert("이메일 또는 비밀번호를 확인해주세요.")
       return false // 실패 보고
     }
+
+    
   }
 
   // 회원가입
@@ -80,5 +82,59 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  return { userInfo, isLoggedIn, login, signup, logout, checkLoginStatus }
+  // 닉네임 중복 확인
+  const checkNickname = async (nickname) => {
+    try {
+      const res = await checkNicknameApi(nickname)
+      return res.data // true(중복) or false(사용가능)
+    } catch (err) {
+      console.error(err)
+      return true // 에러나면 일단 중복으로 처리
+    }
+  }
+
+  // 정보 수정
+  const updateInfo = async (nickname) => {
+    if (!userInfo.value) return false
+    try {
+      await updateUserApi(userInfo.value.id, { nickname })
+      // 스토어 정보도 갱신
+      userInfo.value.name = nickname // 프론트 변수명(name) <-> 백엔드(nickname) 주의
+      return true
+    } catch (err) {
+      alert("정보 수정 실패")
+      return false
+    }
+  }
+
+  // 비밀번호 변경
+  const changePassword = async (currentPassword, newPassword) => {
+    if (!userInfo.value) return false
+    try {
+      await changePasswordApi(userInfo.value.id, { currentPassword, newPassword })
+      return true
+    } catch (err) {
+      // 백엔드에서 400 에러(비번 틀림)를 보내면 여기서 잡힘
+      alert(err.response?.data || "비밀번호 변경 실패")
+      return false
+    }
+  }
+
+  // 회원 탈퇴
+  const deleteAccount = async (password) => {
+    if (!userInfo.value) return false
+    try {
+      await deleteUserApi(userInfo.value.id, password)
+      userInfo.value = null // 로그아웃 처리
+      return true
+    } catch (err) {
+      alert(err.response?.data || "탈퇴 실패")
+      return false
+    }
+  }
+
+  return { 
+    userInfo, isLoggedIn, login, signup, logout, checkLoginStatus, 
+    checkNickname, updateInfo, changePassword, deleteAccount // ★ 반환 추가
+  }
 })
