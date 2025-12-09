@@ -170,7 +170,7 @@ const copyInviteCode = () => {
           
           <div class="flex items-center gap-3 text-sm text-gray-500 mt-1">
             <div class="flex items-center gap-1 font-medium">
-              <span class="text-[#DE2E5F]">{{ tripStore.tripInfo.currentMembers ? tripStore.tripInfo.currentMembers.length : 1 }}</span>
+              <span class="text-[#DE2E5F]">{{ tripStore.tripInfo.currentParticipants || 1 }}</span>
               <span>/</span>
               <span>{{ tripStore.tripInfo.maxMembers }}명 참여 중</span>
             </div>

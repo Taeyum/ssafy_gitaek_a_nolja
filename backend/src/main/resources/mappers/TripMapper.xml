@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.gitaek.mapper.TripMapper">
+
+    <insert id="insertTrip" parameterType="com.ssafy.gitaek.model.Trip" useGeneratedKeys="true" keyProperty="tripId">
+        INSERT INTO Trip (
+        title,
+        style,          description,
+        start_date,
+        end_date,
+        owner_id,
+        max_participants,
+        region_id,
+        created_at
+        )
+        VALUES (
+        #{title},
+        #{style},       #{description},
+        #{startDate},
+        #{endDate},
+        #{ownerId},
+        #{maxParticipants},
+        1,              NOW()
+        )
+    </insert>
+
+    <insert id="insertParticipant">
+        INSERT INTO Trip_Participant (trip_id, user_id, joined_at, role)
+        VALUES (#{tripId}, #{userId}, NOW(), #{role})
+    </insert>
+
+    <select id="selectMyTrips" parameterType="int" resultType="com.ssafy.gitaek.model.Trip">
+        SELECT
+        t.*,
+        (SELECT COUNT(*) FROM Trip_Participant tp2 WHERE tp2.trip_id = t.trip_id) as currentParticipants
+        FROM Trip t
+        JOIN Trip_Participant tp ON t.trip_id = tp.trip_id
+        WHERE tp.user_id = #{userId}
+        ORDER BY t.start_date DESC
+    </select>
+
+    <select id="selectTripById" resultType="com.ssafy.gitaek.model.Trip">
+        SELECT * FROM Trip WHERE trip_id = #{tripId}
+    </select>
+
+    <delete id="deleteTripParticipants">
+        DELETE FROM Trip_Participant WHERE trip_id = #{tripId}
+    </delete>
+
+    <delete id="deleteTrip">
+        DELETE FROM Trip WHERE trip_id = #{tripId}
+    </delete>
+</mapper>

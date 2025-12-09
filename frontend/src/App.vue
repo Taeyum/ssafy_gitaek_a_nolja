@@ -34,6 +34,7 @@ const currentView = ref('landing')
       v-else-if="currentView === 'mypage'"
       @back="currentView = 'landing'"
       @go-edit="currentView = 'profile-edit'"
+      @go-plan="currentView = 'planning'"  
     />
 
     <ProfileEdit
