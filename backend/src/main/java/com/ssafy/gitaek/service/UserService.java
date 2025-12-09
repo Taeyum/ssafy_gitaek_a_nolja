@@ -1,7 +1,12 @@
 package com.ssafy.gitaek.service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import com.ssafy.gitaek.mapper.UserMapper;
 import com.ssafy.gitaek.model.User;
 
@@ -55,5 +60,42 @@ public class UserService {
 
 		return true;
 	}
+	
+// 관리자 기능 추가
+    
+    // 1. 회원 목록 조회 (페이징 포함)
+    public Map<String, Object> getUserList(int page, String type, String keyword) {
+        int limit = 10; // 한 페이지당 10명
+        int offset = (page - 1) * limit;
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("type", type);
+        params.put("keyword", keyword);
+        params.put("offset", offset);
+        params.put("limit", limit);
+
+        List<User> users = userMapper.selectUserList(params);
+        int totalCount = userMapper.countUserList(params);
+        int totalPage = (int) Math.ceil((double) totalCount / limit);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("users", users);
+        result.put("totalPage", totalPage);
+        
+        return result;
+    }
+
+    // 2. 권한 변경 (정지/해제/관리자승격)
+    public void changeUserRole(int userId, String role) {
+        userMapper.updateUserRole(userId, role);
+    }
+
+    // 3. 비밀번호 초기화 (1234로 강제 변경)
+    public void resetUserPassword(int userId) {
+        User user = new User();
+        user.setUserId(userId);
+        user.setPassword("1234"); // 초기화 비번
+        userMapper.updatePassword(user);
+    }
 
 }
