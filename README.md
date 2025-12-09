@@ -107,8 +107,8 @@ Postman 설치 이슈 대안으로(박기택 노트북에 윈도우 버전이 �
 1. DB 및 초기 데이터 세팅 (SQL)
 2. Model.java에도 자바 객체 맞추기: role 추가
 - 이유
-    1. **MyBatis**가 DB에서 role을 가져왔을 때 담을 그릇이  User.java라서 꼭 필요
-    2. User.java는 **DB 테이블의 복사본**이라서, DB가 바뀌면 얘도 무조건 바뀜.
+    1. MyBatis가 DB에서 role을 가져왔을 때 담을 그릇이  User.java라서 꼭 필요
+    2. User.java는 DB 테이블의 복사본이라서, DB가 바뀌면 얘도 무조건 바뀜.
     3. 다른 DTO들은 “이 정보가 필요한가?"를 따져보고 필요할 때만 추가하면 됨. 
 3. Mapper XML 수정 (UserMapper.xml)
 - 확인
@@ -121,11 +121,11 @@ Postman 설치 이슈 대안으로(박기택 노트북에 윈도우 버전이 �
     
     - 권한 종류
         
-        role에 “BANNED”를 넣으면 → **정지 기능**
+        role에 “BANNED”를 넣으면 → 정지 기능
         
-        role에  “USER”를 넣으면 → **정지 해제 기능**
+        role에  “USER”를 넣으면 → 정지 해제 기능
         
-        role에  “ADMIN’을 넣으면 → **관리자 승격 기능**
+        role에  “ADMIN’을 넣으면 → 관리자 승격 기능
         
 4. Mapper Interface 수정(UserMapper.java): 관리자용 메서드 추가
 5. Service 구현(UserService.java)
