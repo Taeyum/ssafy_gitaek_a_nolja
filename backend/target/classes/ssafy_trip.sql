@@ -12,8 +12,6 @@ CREATE TABLE Users (
 );
 
 <<<<<<< HEAD
--- [방법 2] 이미 테이블이 있다면 (이거 실행):
-ALTER TABLE Users ADD COLUMN role VARCHAR(20) DEFAULT 'ROLE_USER';
 
 -- [2] 지역 (Region)
 =======
