@@ -1,9 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import LandingPage from '@/views/LandingPage.vue'
 import PlanningDashboard from '@/views/PlanningDashboard.vue'
 import MyPage from '@/views/MyPage.vue'
-import { onMounted } from 'vue' // 추가
+import ProfileEdit from '@/views/ProfileEdit.vue' // ★ 추가됨
 import { useUserStore } from '@/stores/userStore' // 추가
 
 
@@ -33,6 +33,12 @@ const currentView = ref('landing')
     <MyPage 
       v-else-if="currentView === 'mypage'"
       @back="currentView = 'landing'"
+      @go-edit="currentView = 'profile-edit'"
+    />
+
+    <ProfileEdit
+      v-else-if="currentView === 'profile-edit'"
+      @back="currentView = 'mypage'"
     />
   </Transition>
 </template>

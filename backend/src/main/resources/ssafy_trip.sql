@@ -10,6 +10,11 @@ CREATE TABLE Users (
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP -- 가입일
 );
 
+<<<<<<< HEAD
+
+-- [2] 지역 (Region)
+=======
+>>>>>>> b4014e7a4cba316cdf9c5536248f3c8e5c92d9e3
 CREATE TABLE Region (
     region_id   INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
