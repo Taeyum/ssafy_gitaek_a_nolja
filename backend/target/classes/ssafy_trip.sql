@@ -10,13 +10,6 @@ CREATE TABLE Users (
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP -- 가입일
 );
 
-<<<<<<< HEAD
--- [방법 2] 이미 테이블이 있다면 (이거 실행):
-ALTER TABLE Users ADD COLUMN role VARCHAR(20) DEFAULT 'ROLE_USER';
-
--- [2] 지역 (Region)
-=======
->>>>>>> b4014e7a4cba316cdf9c5536248f3c8e5c92d9e3
 CREATE TABLE Region (
     region_id   INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
