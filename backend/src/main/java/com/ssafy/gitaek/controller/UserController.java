@@ -114,49 +114,4 @@ public class UserController {
             return new ResponseEntity<>("현재 비밀번호가 틀렸습니다.", HttpStatus.BAD_REQUEST);
         }
     }
-
-    // [8] 닉네임 중복 체크: GET /api/users/check/{nickname}
-    @GetMapping("/check/{nickname}")
-    public ResponseEntity<?> checkNickname(@PathVariable String nickname) {
-        boolean exists = userService.isNicknameExists(nickname);
-        // exists가 true면 중복(사용불가), false면 사용가능
-        return new ResponseEntity<>(exists, HttpStatus.OK);
-    }
-
-    // [9] 회원 정보 수정: PUT /api/users/{userId}
-    @PutMapping("/{userId}")
-    public ResponseEntity<?> updateUser(@PathVariable int userId, @RequestBody User user, HttpSession session) {
-        User loginUser = (User) session.getAttribute("loginUser");
-        if (loginUser == null || loginUser.getUserId() != userId) {
-            return new ResponseEntity<>("권한이 없습니다.", HttpStatus.UNAUTHORIZED);
-        }
-
-        user.setUserId(userId); // ID 강제 주입
-        userService.updateUserInfo(user);
-
-        // 세션 정보도 갱신 (중요! 안하면 새로고침 전까지 옛날 닉네임 보임)
-        loginUser.setNickname(user.getNickname());
-        // loginUser.setPhone(user.getPhone()); // 전화번호 있다면
-        session.setAttribute("loginUser", loginUser);
-
-        return new ResponseEntity<>("회원 정보가 수정되었습니다.", HttpStatus.OK);
-    }
-
-    // [10] 회원 탈퇴: DELETE /api/users/{userId}
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<?> deleteUser(@PathVariable int userId, @RequestBody UserLoginRequest request, HttpSession session) {
-        // 본인 확인 (request body에 password가 들어있다고 가정)
-        User loginUser = (User) session.getAttribute("loginUser");
-        if (loginUser == null || loginUser.getUserId() != userId) {
-            return new ResponseEntity<>("권한이 없습니다.", HttpStatus.UNAUTHORIZED);
-        }
-
-        boolean result = userService.deleteUser(userId, request.getPassword());
-        if (result) {
-            session.invalidate(); // 로그아웃 처리
-            return new ResponseEntity<>("회원 탈퇴가 완료되었습니다.", HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("비밀번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST);
-        }
-    }
 }

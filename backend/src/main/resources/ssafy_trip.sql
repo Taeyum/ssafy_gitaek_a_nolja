@@ -7,15 +7,9 @@ CREATE TABLE Users (
     email       VARCHAR(255) NOT NULL UNIQUE,
     password    VARCHAR(255) NOT NULL,
     nickname    VARCHAR(100) NOT NULL,
-    role        VARCHAR(20) DEFAULT 'ROLE_USER', -- ★ 추가됨 (ROLE_USER, ROLE_ADMIN)
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP -- 가입일
 );
 
-<<<<<<< HEAD
-
--- [2] 지역 (Region)
-=======
->>>>>>> b4014e7a4cba316cdf9c5536248f3c8e5c92d9e3
 CREATE TABLE Region (
     region_id   INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
@@ -92,3 +86,13 @@ ALTER TABLE Chat_Room ADD CONSTRAINT FK_CR_Trip FOREIGN KEY (trip_id) REFERENCES
 
 ALTER TABLE Chat_Message ADD CONSTRAINT FK_CM_Room FOREIGN KEY (chat_room_id) REFERENCES Chat_Room(chat_room_id);
 ALTER TABLE Chat_Message ADD CONSTRAINT FK_CM_User FOREIGN KEY (user_id) REFERENCES Users(user_id);
+
+-- 1. Users 테이블에 role 컬럼 추가 (기본값은 일반 유저인 'USER')
+ALTER TABLE Users ADD COLUMN role VARCHAR(20) DEFAULT 'USER';
+
+-- 2. 관리자 계정 생성 (아이디: admin, 비번: 1234, 권한: ADMIN)
+INSERT INTO Users (email, password, nickname, role, created_at)
+VALUES ('admin', '1234', '관리자', 'ADMIN', NOW());
+
+-- 3. 확인 (잘 들어갔나 조회)
+SELECT * FROM Users WHERE email = 'admin';
