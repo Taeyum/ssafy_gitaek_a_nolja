@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.gitaek.mapper.PoiMapper">
+    <insert id="insertPoi" parameterType="com.ssafy.gitaek.dto.PoiDto">
+        INSERT INTO POI (name, description, address, latitude, longitude, thumbnail_url, region_id)
+        VALUES (#{name}, #{description}, #{address}, #{latitude}, #{longitude}, #{thumbnailUrl}, #{regionId})
+    </insert>
+
+    <select id="selectPois" parameterType="int" resultType="com.ssafy.gitaek.dto.PoiDto">
+        SELECT poi_id, name, description, address, latitude, longitude, thumbnail_url, region_id
+        FROM POI
+        <where>
+            <if test="regionId != 0">
+                region_id = #{regionId}
+            </if>
+        </where>
+    </select>
+</mapper>

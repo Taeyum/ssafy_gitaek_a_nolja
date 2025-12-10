@@ -1,6 +1,7 @@
 package com.ssafy.gitaek.controller;
 
 import com.ssafy.gitaek.model.User;
+import com.ssafy.gitaek.service.OpenApiService;
 import com.ssafy.gitaek.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,10 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+
+    // 추가됨: OpenApiService 주입
+    @Autowired
+    private OpenApiService openApiService;
 
     // 관리자 권한 체크용 헬퍼 메서드
     private boolean isAdmin(HttpSession session) {
@@ -55,5 +60,15 @@ public class AdminController {
 
         userService.resetUserPassword(userId);
         return ResponseEntity.ok("비밀번호가 1234로 초기화되었습니다.");
+    }
+
+    // 추가됨: 데이터 수집 실행 메서드
+    // 호출 주소: http://localhost:8080/admin/users/load-data
+    @GetMapping("/load-data")
+    public ResponseEntity<String> loadData(HttpSession session) {
+        // if (!isAdmin(session)) return ResponseEntity.status(HttpStatus.FORBIDDEN).body("관리자만 가능");
+
+        String result = openApiService.fetchAndSaveAllAttractions();
+        return ResponseEntity.ok(result);
     }
 }

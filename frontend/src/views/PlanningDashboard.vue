@@ -1,10 +1,12 @@
 <script setup>
-import { ref, defineEmits } from 'vue'
+import { ref, defineEmits, onMounted } from 'vue'
 import { MapPin, Search, Sparkles, Edit3, Lock, X, Plus, ArrowLeft, CheckCircle, Calendar, Clock, Type , Copy} from 'lucide-vue-next'
 import MapArea from '@/components/MapArea.vue'
 import ItineraryList from '@/components/ItineraryList.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
 import { useTripStore } from '@/stores/tripStore'
+// ★ API import 추가
+import { getAttractionsApi } from '@/api/attraction'
 
 const emit = defineEmits(['back'])
 const mapAreaRef = ref(null)
@@ -15,56 +17,98 @@ const currentEditor = ref(null)
 const activeTab = ref('itinerary') 
 const showAiModal = ref(false)
 
-// 검색 관련
+// 검색 및 데이터 관련
 const searchQuery = ref("")
 const searchResults = ref([])
 const isSearching = ref(false)
-
-// ▼▼▼ [업그레이드] 일정 모달 상태 (추가/수정 통합) ▼▼▼
-const showModal = ref(false)
-const modalMode = ref('add') // 'add' 또는 'edit'
-const editTargetId = ref(null) // 수정할 아이템 ID
-
-// 모달 입력값들
-const modalDayId = ref("1")
-const modalTime = ref("14:00")
-const modalName = ref("") // 장소 이름 (직접 입력 가능)
-const modalAddress = ref("") // 주소
-const modalLat = ref(0)
-const modalLng = ref(0)
-
-const mockPlaces = [
-  { id: 1, name: "성산일출봉", address: "제주 서귀포시 성산읍", lat: 33.4582, lng: 126.9427 },
-  { id: 2, name: "함덕해수욕장", address: "제주 제주시 조천읍", lat: 33.5434, lng: 126.6697 },
-  { id: 3, name: "제주국제공항", address: "제주 제주시 공항로", lat: 33.5104, lng: 126.4913 },
-  { id: 4, name: "협재해수욕장", address: "제주 제주시 한림읍", lat: 33.3938, lng: 126.2396 },
-  { id: 5, name: "한라산 백록담", address: "제주 서귀포시 토평동", lat: 33.3617, lng: 126.5292 },
-]
+const allAttractions = ref([]) // ★ 전체 관광지 데이터 (DB에서 온 것)
 
 const tripStore = useTripStore()
 
-// 1. 검색 결과에서 [추가] 클릭 시
+// 모달 관련 상태
+const showModal = ref(false)
+const modalMode = ref('add')
+const editTargetId = ref(null)
+const modalDayId = ref("1")
+const modalTime = ref("14:00")
+const modalName = ref("")
+const modalAddress = ref("")
+const modalLat = ref(0)
+const modalLng = ref(0)
+
+// ★ 화면 켜지자마자 실행
+onMounted(async () => {
+  await loadRealData()
+})
+
+// ★ 백엔드에서 데이터 가져와서 지도에 뿌리기
+const loadRealData = async () => {
+  try {
+    // areaCode: 0 (전체 조회) or 1 (서울) 등으로 변경 가능
+    const response = await getAttractionsApi({ areaCode: 0 }) 
+    
+    // 1. 데이터 저장
+    allAttractions.value = response.data
+    console.log(`관광지 ${allAttractions.value.length}개 로드 완료!`)
+
+    // 2. 지도에 마커 찍기 (MapArea의 함수 호출)
+    if (mapAreaRef.value) {
+      mapAreaRef.value.setMarkers(allAttractions.value)
+    }
+  } catch (error) {
+    console.error("관광지 불러오기 실패:", error)
+  }
+}
+
+// ★ 검색 기능 (DB 데이터인 allAttractions에서 필터링)
+const handleSearch = () => {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = []
+    return
+  }
+  isSearching.value = true
+  
+  // 1600개 정도는 프론트에서 필터링해도 충분히 빠릅니다.
+  setTimeout(() => {
+    searchResults.value = allAttractions.value.filter(p => 
+      p.name.includes(searchQuery.value) || (p.address && p.address.includes(searchQuery.value))
+    )
+    isSearching.value = false
+  }, 200)
+}
+
+// 지도 이동 (DB 컬럼명 -> MapArea 함수 호출)
+const moveToLocation = (place) => {
+  const lat = place.latitude || place.lat
+  const lng = place.longitude || place.lng
+  
+  if(mapAreaRef.value && lat && lng) {
+    mapAreaRef.value.moveCamera(lat, lng)
+  }
+}
+
+// 검색 결과에서 [추가] 클릭 시
 const openAddModalFromSearch = (place) => {
   modalMode.value = 'add'
-  modalDayId.value = tripStore.itinerary[0].id
+  // tripStore에 일정이 하나도 없으면 '1'로 fallback
+  modalDayId.value = tripStore.itinerary[0]?.id || "1"
   modalTime.value = "14:00"
   
-  // 검색된 정보 채우기
+  // 데이터 채우기
   modalName.value = place.name
-  modalAddress.value = place.address
-  modalLat.value = place.lat
-  modalLng.value = place.lng
+  modalAddress.value = place.address || "주소 미상"
+  modalLat.value = place.latitude || 0
+  modalLng.value = place.longitude || 0
   
   showModal.value = true
 }
 
-// 2. 하단 [직접 추가하기] 버튼 클릭 시
+// [직접 추가하기] 버튼
 const openManualAddModal = () => {
   modalMode.value = 'add'
-  modalDayId.value = tripStore.itinerary[0].id
+  modalDayId.value = tripStore.itinerary[0]?.id || "1"
   modalTime.value = "12:00"
   
-  // 빈 정보로 시작
   modalName.value = ""
   modalAddress.value = "사용자 지정 장소"
   modalLat.value = 0
@@ -73,12 +117,11 @@ const openManualAddModal = () => {
   showModal.value = true
 }
 
-// 3. 리스트에서 [수정] 아이콘 클릭 시
+// 리스트에서 [수정] 버튼
 const openEditModal = (dayId, item) => {
   modalMode.value = 'edit'
   editTargetId.value = item.id
   
-  // 기존 정보 채우기
   modalDayId.value = dayId
   modalTime.value = item.time
   modalName.value = item.name
@@ -87,7 +130,7 @@ const openEditModal = (dayId, item) => {
   showModal.value = true
 }
 
-// 4. 모달 [확인] 클릭 (저장 로직 분기)
+// 모달 확인 (저장/수정)
 const handleModalConfirm = () => {
   if (!modalName.value.trim()) {
     alert("장소 이름을 입력해주세요!")
@@ -95,7 +138,6 @@ const handleModalConfirm = () => {
   }
 
   if (modalMode.value === 'add') {
-    // 추가 로직
     const placeData = {
       name: modalName.value,
       address: modalAddress.value,
@@ -104,54 +146,24 @@ const handleModalConfirm = () => {
     }
     tripStore.addPlace(modalDayId.value, placeData, modalTime.value)
   } else {
-    // 수정 로직
     tripStore.editItem(modalDayId.value, editTargetId.value, modalTime.value, modalName.value)
   }
 
-  // 정리 및 닫기
   showModal.value = false
-  searchResults.value = []
-  searchQuery.value = ""
+  // 검색어 초기화 (선택사항)
+  // searchQuery.value = ""
+  // searchResults.value = []
   activeTab.value = 'itinerary'
 }
 
-// ... (기존 검색/지도 핸들러들 유지) ...
-const handleSearch = () => {
-  if (!searchQuery.value.trim()) {
-    searchResults.value = []
-    return
-  }
-  isSearching.value = true
-  setTimeout(() => {
-    searchResults.value = mockPlaces.filter(p => p.name.includes(searchQuery.value))
-    isSearching.value = false
-  }, 300)
-}
-
-const moveToLocation = (place) => {
-  mapAreaRef.value?.moveCamera(place.lat, place.lng)
-  searchQuery.value = place.name 
-}
-
-const handleRequestEdit = () => {
-  isEditing.value = true
-  currentEditor.value = "나"
-}
-
-const handleFinishEdit = () => {
-  isEditing.value = false
-  currentEditor.value = null
-}
-
+const handleRequestEdit = () => { isEditing.value = true; currentEditor.value = "나" }
+const handleFinishEdit = () => { isEditing.value = false; currentEditor.value = null }
 const copyInviteCode = () => {
   if (tripStore.tripInfo.inviteCode) {
     navigator.clipboard.writeText(tripStore.tripInfo.inviteCode)
-    alert(`초대 코드 [${tripStore.tripInfo.inviteCode}]가 복사되었습니다!\n친구에게 공유하세요.`)
-  } else {
-    alert("초대 코드가 없습니다.")
+    alert(`초대 코드 [${tripStore.tripInfo.inviteCode}] 복사 완료!`)
   }
 }
-
 </script>
 
 <template>
@@ -167,20 +179,14 @@ const copyInviteCode = () => {
         </div>
         <div>
           <h1 class="text-xl font-bold text-gray-900">{{ tripStore.tripInfo.title }}</h1>
-          
           <div class="flex items-center gap-3 text-sm text-gray-500 mt-1">
             <div class="flex items-center gap-1 font-medium">
               <span class="text-[#DE2E5F]">{{ tripStore.tripInfo.currentParticipants || 1 }}</span>
               <span>/</span>
               <span>{{ tripStore.tripInfo.maxMembers }}명 참여 중</span>
             </div>
-
             <div class="h-3 w-[1px] bg-gray-300"></div>
-
-            <button 
-              @click="copyInviteCode"
-              class="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-md transition-colors text-gray-600"
-            >
+            <button @click="copyInviteCode" class="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-md transition-colors text-gray-600">
               <Copy class="w-3 h-3" />
               코드: {{ tripStore.tripInfo.inviteCode || 'CODE' }}
             </button>
@@ -213,6 +219,7 @@ const copyInviteCode = () => {
     <div class="flex-1 flex overflow-hidden">
         <div class="w-[65%] relative">
              <MapArea ref="mapAreaRef" />
+             
              <div class="absolute top-6 left-6 right-6 z-10 flex flex-col gap-3 pointer-events-none">
                 <div class="pointer-events-auto relative max-w-xl">
                     <div class="absolute inset-0 bg-white/80 backdrop-blur-md rounded-2xl shadow-xl"></div>
@@ -222,8 +229,9 @@ const copyInviteCode = () => {
                             <input v-model="searchQuery" @keydown.enter="handleSearch" type="text" placeholder="여행지 검색" class="w-full bg-transparent border-none focus:outline-none text-base py-3 placeholder-gray-400" />
                             <button @click="handleSearch" class="bg-[#DE2E5F] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#c92552] transition-colors whitespace-nowrap">검색</button>
                         </div>
+                         
                          <div v-if="searchResults.length > 0" class="mt-3 bg-white rounded-xl shadow-lg border border-gray-100 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2">
-                             <div v-for="place in searchResults" :key="place.id" class="p-4 hover:bg-gray-50 flex justify-between items-center border-b last:border-none transition-colors group">
+                             <div v-for="place in searchResults" :key="place.poiId" class="p-4 hover:bg-gray-50 flex justify-between items-center border-b last:border-none transition-colors group">
                                   <div @click="moveToLocation(place)" class="cursor-pointer flex-1">
                                     <div class="font-bold text-gray-900">{{ place.name }}</div>
                                     <div class="text-xs text-gray-500 mt-0.5">{{ place.address }}</div>
