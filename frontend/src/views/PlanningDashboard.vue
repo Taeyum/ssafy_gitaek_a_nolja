@@ -218,7 +218,8 @@ const copyInviteCode = () => {
 
     <div class="flex-1 flex overflow-hidden">
         <div class="w-[65%] relative">
-             <MapArea ref="mapAreaRef" />
+             <MapArea ref="mapAreaRef"
+             @add-to-plan="openAddModalFromSearch" />
              
              <div class="absolute top-6 left-6 right-6 z-10 flex flex-col gap-3 pointer-events-none">
                 <div class="pointer-events-auto relative max-w-xl">

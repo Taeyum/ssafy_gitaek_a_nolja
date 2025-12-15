@@ -1,27 +1,45 @@
 <script setup>
-import { onMounted, ref, defineExpose, defineEmits } from 'vue'
+import { onMounted, onUnmounted, ref, defineExpose, defineEmits } from 'vue'
 
 const mapContainer = ref(null)
 let mapInstance = null
 let markers = [] 
 let activeInfoWindow = null 
+let currentPlaces = [] // ★ 현재 지도에 뿌려진 데이터들을 기억할 변수
 
-const emit = defineEmits(['marker-clicked'])
+// 부모에게 보낼 이벤트 정의 ('add-to-plan' 추가됨)
+const emit = defineEmits(['marker-clicked', 'add-to-plan'])
+
+// ★ [핵심 1] 브라우저(Window)에서 보내는 신호를 감지하는 리스너 등록
+const handleAddPlaceEvent = (event) => {
+  const poiId = event.detail
+  // ID로 해당 장소 객체를 찾음
+  const place = currentPlaces.find(p => p.poiId === poiId)
+  if (place) {
+    emit('add-to-plan', place) // 부모에게 "이거 추가해!" 라고 전달
+  }
+}
 
 onMounted(() => {
+  // 이벤트 리스너 부착
+  window.addEventListener('add-place-map', handleAddPlaceEvent)
+
   if (window.kakao && window.kakao.maps) {
-    window.kakao.maps.load(() => {
-      initMap()
-    })
+    window.kakao.maps.load(() => initMap())
   } else {
-    console.error("카카오맵 스크립트가 로드되지 않았습니다.")
+    console.error("카카오맵 스크립트 로드 실패")
   }
+})
+
+// 컴포넌트 꺼질 때 리스너 제거 (메모리 누수 방지)
+onUnmounted(() => {
+  window.removeEventListener('add-place-map', handleAddPlaceEvent)
 })
 
 const initMap = () => {
   const container = mapContainer.value
   const options = {
-    center: new window.kakao.maps.LatLng(37.5665, 126.9780), 
+    center: new window.kakao.maps.LatLng(37.5665, 126.9780),
     level: 10
   }
   mapInstance = new window.kakao.maps.Map(container, options)
@@ -36,6 +54,9 @@ const moveCamera = (lat, lng) => {
 
 const setMarkers = (places) => {
   if (!mapInstance) return
+  
+  // ★ 데이터를 백업해둠 (나중에 ID로 찾기 위해)
+  currentPlaces = places
 
   // 기존 마커 초기화
   if (markers.length > 0) {
@@ -50,7 +71,6 @@ const setMarkers = (places) => {
   places.forEach(place => {
     const lat = place.latitude || place.lat
     const lng = place.longitude || place.lng
-
     if (!lat || !lng) return
 
     const position = new window.kakao.maps.LatLng(lat, lng)
@@ -61,10 +81,10 @@ const setMarkers = (places) => {
       title: place.name
     })
 
-    // ★ [수정됨] 인포윈도우 내용 (이미지 추가)
-    // 이미지가 없으면 기본 이미지(No Image)를 보여주도록 처리
     const imageUrl = place.thumbnailUrl || 'https://via.placeholder.com/150x100?text=No+Image';
     
+    // ★ [핵심 2] onclick 부분 수정
+    // 버튼 클릭 시 'add-place-map'이라는 이름으로 이벤트를 날립니다.
     const content = `
       <div style="padding:10px; width:220px; background:white; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:8px;">
         <div style="width:100%; height:120px; border-radius:6px; overflow:hidden; background:#f1f1f1;">
@@ -75,8 +95,11 @@ const setMarkers = (places) => {
           <div style="font-size:11px; color:#888;">${place.address || '주소 정보 없음'}</div>
         </div>
         <div style="text-align:right;">
-           <button style="background:#DE2E5F; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer;" onclick="window.dispatchEvent(new CustomEvent('add-place', { detail: ${place.poiId} }))">
-             + 담기
+           <button 
+             onclick="window.dispatchEvent(new CustomEvent('add-place-map', { detail: ${place.poiId} }))"
+             style="background:#DE2E5F; color:white; border:none; border-radius:4px; padding:6px 12px; font-size:11px; font-weight:bold; cursor:pointer;"
+           >
+             + 일정에 추가
            </button>
         </div>
       </div>
@@ -85,17 +108,14 @@ const setMarkers = (places) => {
     const infowindow = new window.kakao.maps.InfoWindow({
       content: content,
       removable: true,
-      zIndex: 10 // 다른 마커보다 위에 뜨도록
+      zIndex: 10
     })
 
     window.kakao.maps.event.addListener(marker, 'click', () => {
-      if (activeInfoWindow) {
-        activeInfoWindow.close()
-      }
+      if (activeInfoWindow) activeInfoWindow.close()
       infowindow.open(mapInstance, marker)
       activeInfoWindow = infowindow
       
-      // (선택) 부모에게 알림
       emit('marker-clicked', place)
     })
 
