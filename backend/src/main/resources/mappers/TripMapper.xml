@@ -52,4 +52,33 @@
     <delete id="deleteTrip">
         DELETE FROM Trip WHERE trip_id = #{tripId}
     </delete>
+
+    <insert id="registSchedule" parameterType="com.ssafy.gitaek.dto.TripScheduleDto">
+        INSERT INTO Trip_Schedule (trip_id, poi_id, trip_day, visit_order, memo)
+        VALUES (#{tripId}, #{poiId}, #{tripDay}, #{visitOrder}, #{memo})
+    </insert>
+
+    <select id="selectSchedulesByTripId" resultType="com.ssafy.gitaek.dto.TripScheduleDto">
+        SELECT
+        s.trip_id, s.poi_id, s.trip_day, s.visit_order, s.memo,
+        p.name as placeName,
+        p.address as placeAddress,
+        p.latitude as placeLat,
+        p.longitude as placeLng
+        FROM Trip_Schedule s
+        JOIN POI p ON s.poi_id = p.poi_id
+        WHERE s.trip_id = #{tripId}
+        ORDER BY s.trip_day ASC, s.visit_order ASC
+    </select>
+
+    <delete id="deleteSchedule">
+        DELETE FROM Trip_Schedule
+        WHERE trip_id = #{tripId}
+        AND trip_day = #{tripDay}
+        AND poi_id = #{poiId}
+    </delete>
+
+    <update id="updateCurrentEditor">
+        UPDATE Trip SET current_editor_id = #{userId} WHERE trip_id = #{tripId}
+    </update>
 </mapper>

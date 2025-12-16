@@ -38,18 +38,19 @@ CREATE TABLE POI (
     region_id       INT NOT NULL
 );
 
--- [4] 여행 (Trip)
+-- [4] 여행 (Trip) - ★ 수정됨 (current_editor_id 추가)
 CREATE TABLE Trip (
-    trip_id         INT AUTO_INCREMENT PRIMARY KEY,
-    title           VARCHAR(255) NOT NULL,
-    style           VARCHAR(50),
-    description     TEXT,
-    start_date      DATE NOT NULL,
-    end_date        DATE NOT NULL,
-    owner_id        INT NOT NULL,
-    max_participants INT DEFAULT 4,
-    region_id       INT NOT NULL,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    trip_id           INT AUTO_INCREMENT PRIMARY KEY,
+    title             VARCHAR(255) NOT NULL,
+    style             VARCHAR(50),
+    description       TEXT,
+    start_date        DATE NOT NULL,
+    end_date          DATE NOT NULL,
+    owner_id          INT NOT NULL,
+    max_participants  INT DEFAULT 4,
+    region_id         INT NOT NULL,
+    current_editor_id INT DEFAULT NULL, -- ★ [추가] 현재 수정 중인 유저 ID (동시성 제어용)
+    created_at        DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- [5] 여행 참가자 (Trip_Participant)
@@ -57,7 +58,7 @@ CREATE TABLE Trip_Participant (
     trip_id     INT NOT NULL,
     user_id     INT NOT NULL,
     joined_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
-    role        VARCHAR(20) DEFAULT 'MEMBER', 
+    role        VARCHAR(20) DEFAULT 'MEMBER',
     PRIMARY KEY (trip_id, user_id)
 );
 
@@ -98,6 +99,8 @@ ALTER TABLE POI ADD CONSTRAINT FK_POI_Region FOREIGN KEY (region_id) REFERENCES 
 -- Trip -> User (Owner), Region
 ALTER TABLE Trip ADD CONSTRAINT FK_Trip_Owner FOREIGN KEY (owner_id) REFERENCES Users(user_id);
 ALTER TABLE Trip ADD CONSTRAINT FK_Trip_Region FOREIGN KEY (region_id) REFERENCES Region(region_id);
+-- (선택 사항: current_editor_id도 외래키로 걸어두면 유저 삭제 시 안전합니다)
+ALTER TABLE Trip ADD CONSTRAINT FK_Trip_Editor FOREIGN KEY (current_editor_id) REFERENCES Users(user_id) ON DELETE SET NULL;
 
 -- Trip_Participant -> Trip, User (ON DELETE CASCADE 추가: 여행 삭제 시 참가자도 자동 삭제)
 ALTER TABLE Trip_Participant ADD CONSTRAINT FK_TP_Trip FOREIGN KEY (trip_id) REFERENCES Trip(trip_id) ON DELETE CASCADE;
@@ -119,7 +122,7 @@ ALTER TABLE Chat_Message ADD CONSTRAINT FK_CM_User FOREIGN KEY (user_id) REFEREN
 -- 4. 초기 필수 데이터 (Region) 삽입
 -- ==========================================
 -- TourAPI 지역 코드와 매칭 (서울=1, 인천=2 ... 제주=39)
-INSERT INTO Region (region_id, name) VALUES 
+INSERT INTO Region (region_id, name) VALUES
 (1, '서울'),
 (2, '인천'),
 (3, '대전'),
@@ -136,7 +139,8 @@ INSERT INTO Region (region_id, name) VALUES
 (36, '경남'),
 (37, '전북'),
 (38, '전남'),
-(39, '제주');
+(39, '제주'),
+(0, '전국'); -- 전국 검색용 0번 추가 (선택사항)
 
 -- 테스트용 관리자 계정 (비번: 1234)
 INSERT INTO Users (email, password, nickname, role) VALUES 

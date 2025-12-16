@@ -15,4 +15,5 @@ public class Trip {
     private int maxParticipants;
     private int regionId;
     private int currentParticipants;
+    private Integer currentEditorId;
 }

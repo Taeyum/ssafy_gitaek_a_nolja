@@ -1,6 +1,7 @@
 package com.ssafy.gitaek.service;
 
 import com.ssafy.gitaek.dto.TripCreateRequest;
+import com.ssafy.gitaek.dto.TripScheduleDto;
 import com.ssafy.gitaek.mapper.TripMapper;
 import com.ssafy.gitaek.model.Trip;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,8 @@ public class TripService {
         return tripMapper.selectMyTrips(userId);
     }
 
+    public Trip getTrip(int tripId) { return tripMapper.selectTripById(tripId); }
+
     @Transactional
     public void deleteTrip(int tripId, int userId) {
         // 1. 여행 정보 가져오기
@@ -60,4 +63,47 @@ public class TripService {
         // (만약 일정이나 채팅 테이블이 있다면 여기서 같이 지워야 함)
         tripMapper.deleteTrip(tripId);
     }
+
+    @Transactional
+    public void addSchedule(TripScheduleDto dto) {
+        // 순서(visitOrder)나 날짜(tripDay) 로직이 필요하면 여기서 계산
+        // 일단 기본값으로 저장한다고 가정
+        if(dto.getTripDay() == 0) dto.setTripDay(1);
+        tripMapper.registSchedule(dto);
+    }
+
+    public List<TripScheduleDto> getSchedules(int tripId) {
+        return tripMapper.selectSchedulesByTripId(tripId);
+    }
+
+    @Transactional
+    public void deleteSchedule(int tripId, int tripDay, int poiId) {
+        tripMapper.deleteSchedule(tripId, tripDay, poiId);
+    }
+
+    // 수정 권한 요청 (Lock 걸기)
+    @Transactional
+    public boolean requestEdit(int tripId, int userId) {
+        Trip trip = tripMapper.selectTripById(tripId);
+
+        // 1. 아무도 수정 중이 아니거나, 내가 이미 수정 중이면 -> 승인
+        if (trip.getCurrentEditorId() == null || trip.getCurrentEditorId() == 0 || trip.getCurrentEditorId() == userId) {
+            tripMapper.updateCurrentEditor(tripId, userId);
+            return true;
+        }
+
+        // 2. 다른 사람이 수정 중이면 -> 거절
+        return false;
+    }
+
+    // 수정 종료 (Lock 해제)
+    @Transactional
+    public void releaseEdit(int tripId, int userId) {
+        // 내가 잡고 있을 때만 해제 가능 (혹은 강제 해제 로직 필요 시 수정)
+        Trip trip = tripMapper.selectTripById(tripId);
+        if (trip != null && trip.getCurrentEditorId() != null && trip.getCurrentEditorId() == userId) {
+            tripMapper.updateCurrentEditor(tripId, null); // null로 초기화
+        }
+    }
+
 }

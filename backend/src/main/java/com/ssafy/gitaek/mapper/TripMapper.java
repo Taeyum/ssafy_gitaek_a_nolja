@@ -1,5 +1,6 @@
 package com.ssafy.gitaek.mapper;
 
+import com.ssafy.gitaek.dto.TripScheduleDto;
 import com.ssafy.gitaek.model.Trip;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -19,4 +20,15 @@ public interface TripMapper {
     Trip selectTripById(int tripId);
     void deleteTripParticipants(int tripId);
     void deleteTrip(int tripId);
+
+    // 여행 일정에 추가
+    void registSchedule(TripScheduleDto tripScheduleDto);
+    List<TripScheduleDto> selectSchedulesByTripId(int tripId);
+
+    // 삭제 메서드 (파라미터가 여러 개라 @Param 사용)
+    void deleteSchedule(@Param("tripId") int tripId,
+                        @Param("tripDay") int tripDay,
+                        @Param("poiId") int poiId);
+
+    void updateCurrentEditor(@Param("tripId") int tripId, @Param("userId") Integer userId);
 }

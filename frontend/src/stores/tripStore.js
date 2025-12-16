@@ -1,6 +1,16 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { createTripApi, getMyTripsApi, deleteTripApi } from '@/api/trip'
+import { 
+  createTripApi, 
+  getMyTripsApi, 
+  deleteTripApi, 
+  addScheduleApi, 
+  getSchedulesApi, 
+  deleteScheduleApi,
+  requestEditApi,     
+  releaseEditApi,     
+  getTripStatusApi    
+} from '@/api/trip'
 
 export const useTripStore = defineStore('trip', () => {
   // 1. 상태 (State)
@@ -18,6 +28,11 @@ export const useTripStore = defineStore('trip', () => {
 
   const itinerary = ref([])
   const myTrips = ref([])
+  
+  // 동시성 제어용 상태
+  const currentEditorName = ref(null) 
+  const isLocked = ref(false)         
+  let pollingInterval = null          
 
   // 2. 액션 (Actions)
 
@@ -31,9 +46,8 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  // ★ [수정됨] 여행 불러오기 (날짜 계산 로직 적용)
-  const loadTrip = (trip) => {
-    // 1. 기본 정보 세팅
+  // 여행 불러오기 (DB 일정 연동)
+  const loadTrip = async (trip) => { 
     tripInfo.value = {
       tripId: trip.tripId,
       title: trip.title,
@@ -41,37 +55,48 @@ export const useTripStore = defineStore('trip', () => {
       endDate: trip.endDate,
       style: trip.style,
       maxMembers: trip.maxParticipants,
-      // ★ [추가] 백엔드에서 가져온 인원 수 저장!
       currentParticipants: trip.currentParticipants || 1,
-      currentMembers: [], // 나중에 멤버 조회 API 필요
       inviteCode: 'LOADED'
     }
 
-    // 2. 날짜 차이 계산 및 일정표 초기화
     const start = new Date(trip.startDate)
     const end = new Date(trip.endDate)
-
-    // 시간 차이(밀리초) 계산
     const diffTime = Math.abs(end - start)
-    // 일(Day) 단위로 변환
     const dayCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
 
     const newItinerary = []
-    
     for (let i = 0; i < dayCount; i++) {
-        // 각 일차의 실제 날짜 계산 (시작일 + i일)
         const currentDate = new Date(start)
         currentDate.setDate(start.getDate() + i)
-        
-        // 날짜를 "YYYY-MM-DD" 문자열로 변환
-        const dateString = currentDate.toISOString().split('T')[0]
-
         newItinerary.push({ 
             id: (i + 1).toString(), 
             day: `${i + 1}일차`,    
-            date: dateString,       
-            items: []               // 나중엔 여기에 DB 데이터를 조회해서 넣어야 함
+            date: currentDate.toISOString().split('T')[0],       
+            items: [] 
         })
+    }
+
+    try {
+      const res = await getSchedulesApi(trip.tripId)
+      const dbSchedules = res.data
+      
+      dbSchedules.forEach(item => {
+        const dayIndex = item.tripDay - 1
+        if (newItinerary[dayIndex]) {
+          newItinerary[dayIndex].items.push({
+            id: Date.now() + Math.random().toString(),
+            time: "12:00", 
+            name: item.placeName,
+            location: item.placeAddress,
+            lat: item.placeLat,
+            lng: item.placeLng,
+            poiId: item.poiId
+          })
+        }
+      })
+      console.log("일정 로드 완료:", dbSchedules.length + "개")
+    } catch (error) {
+      console.error("일정 불러오기 실패:", error)
     }
     
     itinerary.value = newItinerary
@@ -102,18 +127,16 @@ export const useTripStore = defineStore('trip', () => {
         inviteCode: 'Generating...'
       }
 
-      // 생성 시에는 duration 기준으로 일정표 생성
       const newItinerary = []
       for (let i = 1; i <= info.duration; i++) {
         newItinerary.push({
           id: i.toString(),
           day: `${i}일차`,
-          date: `Day ${i}`, // 생성 직후에는 날짜 계산 생략 (또는 위 loadTrip 로직 복사 가능)
+          date: `Day ${i}`,
           items: []
         })
       }
       itinerary.value = newItinerary
-      
       return true
 
     } catch (error) {
@@ -123,19 +146,68 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  // 장소 추가
-  const addPlace = (dayId, place, time) => {
+  // ★ [수정됨] 장소 추가 (장소 중복 + 시간 중복 체크)
+  const addPlace = async (dayId, place, time) => {
     const targetDay = itinerary.value.find(d => d.id === dayId)
-    if (targetDay) {
-      targetDay.items.push({
-        id: Date.now().toString(),
-        time: time ? time : "12:00",
-        name: place.name,
-        location: place.address || "주소 정보 없음",
-        lat: place.lat || 0,
-        lng: place.lng || 0
-      })
-      targetDay.items.sort((a, b) => a.time.localeCompare(b.time))
+    if (!targetDay) return
+
+    const inputTime = time ? time : "12:00"
+
+    // 1. 장소 중복 체크
+    const isPoiDuplicate = targetDay.items.some(item => item.poiId === place.poiId);
+    if (isPoiDuplicate) {
+        alert(`[${place.name}] 이미 해당 날짜에 추가된 장소입니다!`);
+        return; 
+    }
+
+    // 2. ★ [추가] 시간 중복 체크
+    const isTimeDuplicate = targetDay.items.some(item => item.time === inputTime);
+    if (isTimeDuplicate) {
+        alert(`선택하신 시간(${inputTime})에는 이미 일정이 있습니다.\n다른 시간을 선택하거나 기존 일정을 변경해주세요.`);
+        return; 
+    }
+
+    // 3. 임시 ID 생성
+    const tempId = Date.now().toString()
+    
+    // 4. 화면(UI)에 먼저 추가
+    const newItem = {
+      id: tempId,
+      time: inputTime,
+      name: place.name,
+      location: place.address || "주소 정보 없음",
+      lat: place.lat || 0,
+      lng: place.lng || 0,
+      poiId: place.poiId 
+    }
+    
+    targetDay.items.push(newItem)
+    targetDay.items.sort((a, b) => a.time.localeCompare(b.time))
+
+    // 5. 실제 DB 저장 시도
+    try {
+      const dayNumber = parseInt(dayId.replace(/[^0-9]/g, "")) || 1; 
+
+      const scheduleData = {
+        tripId: tripInfo.value.tripId, 
+        poiId: place.poiId,            
+        tripDay: dayNumber,           
+        visitOrder: targetDay.items.length, 
+        memo: ""                       
+      }
+
+      await addScheduleApi(scheduleData)
+      console.log("DB 저장 성공!")
+
+    } catch (error) {
+      console.error("일정 DB 저장 실패:", error)
+      alert("서버 저장에 실패했습니다. 잠시 후 다시 시도해주세요.")
+
+      // 실패 시 롤백
+      const rollbackDay = itinerary.value.find(d => d.id === dayId)
+      if (rollbackDay) {
+        rollbackDay.items = rollbackDay.items.filter(item => item.id !== tempId)
+      }
     }
   }
 
@@ -153,31 +225,117 @@ export const useTripStore = defineStore('trip', () => {
   }
 
   // 아이템 삭제
-  const removePlace = (dayId, itemId) => {
+  const removePlace = async (dayId, itemId) => {
     const targetDay = itinerary.value.find(d => d.id === dayId)
-    if (targetDay) {
+    if (!targetDay) return
+
+    const itemToRemove = targetDay.items.find(item => item.id === itemId)
+    if (!itemToRemove) return
+
+    try {
+      const dayNumber = parseInt(dayId.replace(/[^0-9]/g, "")) || 1;
+      
+      await deleteScheduleApi(
+        tripInfo.value.tripId, 
+        dayNumber,             
+        itemToRemove.poiId     
+      )
+
       targetDay.items = targetDay.items.filter(item => item.id !== itemId)
+      console.log("일정 삭제 완료")
+
+    } catch (error) {
+      console.error("삭제 실패:", error)
+      alert("일정 삭제에 실패했습니다.")
     }
   }
 
-  // ★ [추가] 여행 삭제 액션
+  // 여행 삭제
   const deleteTrip = async (tripId) => {
     try {
       await deleteTripApi(tripId)
-      // 삭제 성공하면 목록 다시 불러오기
       await fetchMyTrips() 
       return true
     } catch (error) {
-      // 서버에서 보낸 에러 메시지 표시 (권한 없음 등)
       alert(error.response?.data || "삭제 실패")
       return false
     }
   }
 
+  // --- 동시성 제어 (폴링) ---
+  const startPolling = (userId) => {
+    if (pollingInterval) return 
+
+    pollingInterval = setInterval(async () => {
+      try {
+        const res = await getTripStatusApi(tripInfo.value.tripId)
+        const trip = res.data
+        
+        if (trip.currentEditorId) {
+            if (trip.currentEditorId !== userId) {
+                currentEditorName.value = "다른 사용자" 
+                isLocked.value = true
+            } else {
+                currentEditorName.value = "나"
+                isLocked.value = false
+            }
+        } else {
+            currentEditorName.value = null
+            isLocked.value = false
+        }
+      } catch (e) {
+        // console.error("폴링 실패", e) // 로그 너무 많이 뜨면 주석 처리
+      }
+    }, 3000) 
+  }
+
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+      pollingInterval = null
+    }
+  }
+
+  const tryRequestEdit = async () => {
+    if (!tripInfo.value.tripId || tripInfo.value.tripId === 0) {
+      alert("여행 정보를 불러오지 못했습니다. 목록에서 다시 선택해주세요.")
+      return false
+    }
+
+    try {
+      await requestEditApi(tripInfo.value.tripId)
+      currentEditorName.value = "나"
+      isLocked.value = false
+      return true
+    } catch (error) {
+      const status = error.response?.status
+      if (status === 409) {
+        alert("다른 사용자가 이미 수정 중입니다!")
+      } else if (status === 401) {
+        alert("로그인이 필요합니다.")
+      } else if (status === 404) {
+        alert("여행 정보를 찾을 수 없습니다.")
+      } else {
+        alert("알 수 없는 오류가 발생했습니다.")
+      }
+      return false
+    }
+  }
+
+  const finishEdit = async () => {
+    try {
+      await releaseEditApi(tripInfo.value.tripId)
+      currentEditorName.value = null
+      return true
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   return { 
     tripInfo, itinerary, myTrips, 
-    fetchMyTrips, loadTrip, createNewTrip, 
-    addPlace, editItem, removePlace ,
-    deleteTrip
+    currentEditorName, isLocked, // state
+    fetchMyTrips, loadTrip, createNewTrip, addPlace, editItem, removePlace, deleteTrip, // basic actions
+    startPolling, stopPolling, tryRequestEdit, finishEdit // polling actions
   }
 })

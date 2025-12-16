@@ -88,7 +88,7 @@ const setMarkers = (places) => {
     const content = `
       <div style="padding:10px; width:220px; background:white; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:8px;">
         <div style="width:100%; height:120px; border-radius:6px; overflow:hidden; background:#f1f1f1;">
-           <img src="${imageUrl}" alt="img" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/150x100?text=Error'"/>
+           <img src="${imageUrl}" alt="img" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://placehold.co/150x100?text=No+Image';"/>
         </div>
         <div>
           <div style="font-weight:bold; font-size:14px; color:#333; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${place.name}</div>

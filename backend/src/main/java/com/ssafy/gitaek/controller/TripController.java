@@ -1,6 +1,7 @@
 package com.ssafy.gitaek.controller;
 
 import com.ssafy.gitaek.dto.TripCreateRequest;
+import com.ssafy.gitaek.dto.TripScheduleDto;
 import com.ssafy.gitaek.model.Trip;
 import com.ssafy.gitaek.model.User;
 import com.ssafy.gitaek.service.TripService;
@@ -71,6 +72,84 @@ public class TripController {
         } catch (Exception e) {
             e.printStackTrace();
             return new ResponseEntity<>("삭제 중 오류 발생", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 일정 추가 API
+    @PostMapping("/schedule")
+    public ResponseEntity<?> addSchedule(@RequestBody TripScheduleDto dto) {
+        try {
+            tripService.addSchedule(dto);
+            return ResponseEntity.ok("일정 추가 성공!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("일정 추가 실패: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{tripId}/schedules")
+    public ResponseEntity<?> getSchedules(@PathVariable int tripId) {
+        try {
+            List<TripScheduleDto> schedules = tripService.getSchedules(tripId);
+            return ResponseEntity.ok(schedules);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("일정 조회 실패");
+        }
+    }
+
+    // 일정 삭제 API
+    // 요청 모양: DELETE /api/trips/{tripId}/schedules?tripDay=1&poiId=123
+    @DeleteMapping("/{tripId}/schedules")
+    public ResponseEntity<?> deleteSchedule(
+            @PathVariable int tripId,
+            @RequestParam int tripDay,
+            @RequestParam int poiId) {
+        try {
+            tripService.deleteSchedule(tripId, tripDay, poiId);
+            return ResponseEntity.ok("일정 삭제 성공");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("삭제 실패");
+        }
+    }
+
+    // 수정 권한 요청
+    @PostMapping("/{tripId}/edit/request")
+    public ResponseEntity<?> requestEdit(@PathVariable int tripId, HttpSession session) {
+        User user = (User) session.getAttribute("loginUser");
+        if (user == null) return ResponseEntity.status(401).build();
+
+        boolean success = tripService.requestEdit(tripId, user.getUserId());
+        if (success) {
+            return ResponseEntity.ok("수정 권한 획득");
+        } else {
+            return ResponseEntity.status(409).body("다른 사용자가 수정 중입니다.");
+        }
+    }
+
+    // 수정 종료
+    @PostMapping("/{tripId}/edit/release")
+    public ResponseEntity<?> releaseEdit(@PathVariable int tripId, HttpSession session) {
+        User user = (User) session.getAttribute("loginUser");
+        if (user == null) return ResponseEntity.status(401).build();
+
+        tripService.releaseEdit(tripId, user.getUserId());
+        return ResponseEntity.ok("수정 권한 해제");
+    }
+
+    @GetMapping("/{tripId}")
+    public ResponseEntity<?> getTrip(@PathVariable int tripId) {
+        try {
+            Trip trip = tripService.getTrip(tripId);
+            if (trip != null) {
+                return ResponseEntity.ok(trip);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("조회 실패");
         }
     }
 }

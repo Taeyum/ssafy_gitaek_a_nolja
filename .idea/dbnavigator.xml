@@ -6,7 +6,7 @@
   </component>
   <component name="DBNavigator.Project.DataEditorManager">
     <record-view-column-sorting-type value="BY_INDEX" />
-    <value-preview-text-wrapping value="true" />
+    <value-preview-text-wrapping value="false" />
     <value-preview-pinned value="false" />
   </component>
   <component name="DBNavigator.Project.DatabaseAssistantManager">
@@ -24,17 +24,16 @@
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a">
-      <console name="Connection" type="STANDARD" schema="ssafy_trip" session="Main"><![CDATA[UPDATE Users SET nickname = '관리자' WHERE user_id = 1;
-UPDATE Users SET nickname = '김싸피' WHERE user_id = 2;
-
-select * from Users;]]></console>
+      <console name="Connection" type="STANDARD" schema="ssafy_trip" session="Main" />
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseEditorStateManager">
     <last-used-providers />
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
-    <open-files />
+    <open-files>
+      <object connection-id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a" object-ref="consoles/Connection" />
+    </open-files>
   </component>
   <component name="DBNavigator.Project.DatabaseSessionManager">
     <connection id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a" />
@@ -48,6 +47,9 @@ select * from Users;]]></console>
   <component name="DBNavigator.Project.ObjectQuickFilterManager">
     <last-used-operator value="EQUAL" />
     <filters />
+  </component>
+  <component name="DBNavigator.Project.ScriptExecutionManager" clear-outputs="true">
+    <recently-used-interfaces />
   </component>
   <component name="DBNavigator.Project.Settings">
     <connections>

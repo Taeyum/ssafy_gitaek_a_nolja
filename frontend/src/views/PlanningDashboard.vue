@@ -1,21 +1,24 @@
 <script setup>
-import { ref, defineEmits, onMounted } from 'vue'
+import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
 import { MapPin, Search, Sparkles, Edit3, Lock, X, Plus, ArrowLeft, CheckCircle, Calendar, Clock, Type , Copy} from 'lucide-vue-next'
 import MapArea from '@/components/MapArea.vue'
 import ItineraryList from '@/components/ItineraryList.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
 import { useTripStore } from '@/stores/tripStore'
-// ★ API import 추가
 import { getAttractionsApi } from '@/api/attraction'
+import { useUserStore } from '@/stores/userStore'
+
+const userStore = useUserStore()
+const tripStore = useTripStore()
 
 const emit = defineEmits(['back'])
 const mapAreaRef = ref(null)
 
 // 상태 관리
 const isEditing = ref(false)
-const currentEditor = ref(null)
 const activeTab = ref('itinerary') 
 const showAiModal = ref(false)
+const modalPoiId = ref(0) // ★ 추가
 
 // 검색 및 데이터 관련
 const searchQuery = ref("")
@@ -23,7 +26,6 @@ const searchResults = ref([])
 const isSearching = ref(false)
 const allAttractions = ref([]) // ★ 전체 관광지 데이터 (DB에서 온 것)
 
-const tripStore = useTripStore()
 
 // 모달 관련 상태
 const showModal = ref(false)
@@ -36,9 +38,18 @@ const modalAddress = ref("")
 const modalLat = ref(0)
 const modalLng = ref(0)
 
-// ★ 화면 켜지자마자 실행
+// ★ 화면 켜지자마자 실행 & 폴링 시작
 onMounted(async () => {
   await loadRealData()
+  // 내 ID를 넘겨줘서 내가 에디터인지 남이 에디터인지 판별 (폴링 시작)
+  if (userStore.userInfo && userStore.userInfo.id) {
+      tripStore.startPolling(userStore.userInfo.id)
+  }
+})
+
+// ★ 화면 꺼지면 폴링 종료 (필수! 성능 저하 방지)
+onUnmounted(() => {
+  tripStore.stopPolling()
 })
 
 // ★ 백엔드에서 데이터 가져와서 지도에 뿌리기
@@ -89,22 +100,35 @@ const moveToLocation = (place) => {
 
 // 검색 결과에서 [추가] 클릭 시
 const openAddModalFromSearch = (place) => {
+  // ★ [수정] 수정 권한 체크 (isEditing 변수는 이제 로컬이 아니라 store 상태에 따라감)
+  if (!isEditing.value) {
+    alert("편집 모드에서만 추가할 수 있습니다.\n상단의 [수정 권한 요청] 버튼을 먼저 눌러주세요!");
+    return;
+  }
+
   modalMode.value = 'add'
   // tripStore에 일정이 하나도 없으면 '1'로 fallback
   modalDayId.value = tripStore.itinerary[0]?.id || "1"
   modalTime.value = "14:00"
-  
+    
   // 데이터 채우기
   modalName.value = place.name
   modalAddress.value = place.address || "주소 미상"
   modalLat.value = place.latitude || 0
   modalLng.value = place.longitude || 0
-  
+  modalPoiId.value = place.poiId
+
   showModal.value = true
 }
 
 // [직접 추가하기] 버튼
 const openManualAddModal = () => {
+  // ★ [수정] 권한 체크
+  if (!isEditing.value) {
+    alert("편집 모드가 아닙니다.");
+    return;
+  }
+
   modalMode.value = 'add'
   modalDayId.value = tripStore.itinerary[0]?.id || "1"
   modalTime.value = "12:00"
@@ -142,7 +166,8 @@ const handleModalConfirm = () => {
       name: modalName.value,
       address: modalAddress.value,
       lat: modalLat.value,
-      lng: modalLng.value
+      lng: modalLng.value,
+      poiId: modalPoiId.value
     }
     tripStore.addPlace(modalDayId.value, placeData, modalTime.value)
   } else {
@@ -156,8 +181,20 @@ const handleModalConfirm = () => {
   activeTab.value = 'itinerary'
 }
 
-const handleRequestEdit = () => { isEditing.value = true; currentEditor.value = "나" }
-const handleFinishEdit = () => { isEditing.value = false; currentEditor.value = null }
+// ★ [수정] 권한 요청 버튼 클릭 시
+const handleRequestEdit = async () => {
+    const success = await tripStore.tryRequestEdit()
+    if (success) {
+        isEditing.value = true
+    }
+}
+
+// ★ [수정] 권한 반납(완료) 버튼 클릭 시
+const handleFinishEdit = async () => {
+    await tripStore.finishEdit()
+    isEditing.value = false
+}
+
 const copyInviteCode = () => {
   if (tripStore.tripInfo.inviteCode) {
     navigator.clipboard.writeText(tripStore.tripInfo.inviteCode)
@@ -196,23 +233,23 @@ const copyInviteCode = () => {
 
       <div class="flex items-center gap-3">
          <div v-if="isEditing" class="flex items-center gap-2">
-          <div class="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full animate-pulse">
-            <Edit3 class="h-4 w-4 text-green-600" />
-            <span class="text-sm font-bold text-green-700">수정 중</span>
-          </div>
-          <button @click="handleFinishEdit" class="flex items-center gap-1 px-4 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors text-sm font-bold shadow-md">
-            <CheckCircle class="h-4 w-4" />
-            완료
-          </button>
-        </div>
-        <div v-else-if="currentEditor" class="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-          <Lock class="h-4 w-4 text-gray-500" />
-          <span class="text-sm text-gray-500">{{ currentEditor }}님이 수정 중...</span>
-        </div>
-        <button v-else @click="handleRequestEdit" class="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-full hover:border-[#DE2E5F] hover:text-[#DE2E5F] transition-all font-semibold text-gray-600">
-          <Edit3 class="h-4 w-4" />
-          수정 권한 요청
-        </button>
+            <div class="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-full animate-pulse border border-green-200">
+                ✏️ 수정 중...
+            </div>
+            <button @click="handleFinishEdit" class="bg-gray-800 text-white px-4 py-2 rounded-full font-bold hover:bg-gray-700 transition-colors shadow-md">
+                완료
+            </button>
+         </div>
+
+         <div v-else-if="tripStore.isLocked" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full font-bold border border-red-100">
+            <Lock class="w-4 h-4" />
+            <span>{{ tripStore.currentEditorName || '누군가' }}가 수정 중입니다</span>
+         </div>
+
+         <button v-else @click="handleRequestEdit" class="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-full hover:border-[#DE2E5F] hover:text-[#DE2E5F] transition-all font-semibold text-gray-600">
+            <Edit3 class="h-4 w-4" />
+            수정 권한 요청
+         </button>
       </div>
     </header>
 
