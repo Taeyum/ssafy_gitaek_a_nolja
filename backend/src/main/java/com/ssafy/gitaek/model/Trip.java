@@ -16,4 +16,5 @@ public class Trip {
     private int regionId;
     private int currentParticipants;
     private Integer currentEditorId;
+    private String inviteCode;
 }

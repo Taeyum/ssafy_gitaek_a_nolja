@@ -1,12 +1,14 @@
 <script setup>
-import { defineEmits, onMounted } from 'vue'
-import { ArrowLeft, User, Mail, MapPin, Calendar, LogOut, ArrowRightCircle, Trash2, Users } from 'lucide-vue-next'
+import { defineEmits, onMounted, onUnmounted } from 'vue' // onUnmounted 추가
+import { ArrowLeft, Mail, Calendar, LogOut, ArrowRightCircle, Trash2, Users } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/userStore'
 import { useTripStore } from '@/stores/tripStore'
 
 const emit = defineEmits(['back', 'go-edit', 'go-plan'])
 const userStore = useUserStore()
 const tripStore = useTripStore()
+
+let pollingInterval = null // ★ 폴링 타이머 변수
 
 const handleLogout = () => {
   if (confirm('정말 로그아웃 하시겠습니까?')) {
@@ -16,25 +18,42 @@ const handleLogout = () => {
 }
 
 const handleTripClick = (trip) => {
-  // 1. 스토어에 해당 여행 정보 장전
   tripStore.loadTrip(trip)
-  // 2. App.vue에게 화면 전환 요청
   emit('go-plan')
 }
 
-// ★ [추가됨] 여행 삭제 핸들러
-const handleDeleteTrip = async (tripId) => {
-  if (confirm("정말 이 여행 계획을 삭제하시겠습니까?")) {
-    const success = await tripStore.deleteTrip(tripId)
-    if (success) {
-      alert("여행이 삭제되었습니다.")
+// 삭제 OR 나가기 핸들러
+const handleDeleteOrLeave = async (trip) => {
+  const isOwner = trip.ownerId === userStore.userInfo.id
+
+  if (isOwner) {
+    if (confirm(`'${trip.title}' 여행을 정말 삭제하시겠습니까?\n모든 데이터가 사라집니다.`)) {
+      const success = await tripStore.deleteTrip(trip.tripId)
+      if (success) alert("여행이 삭제되었습니다.")
     }
+  } else {
+    // leaveTrip 내부에서 confirm 창 띄움
+    const success = await tripStore.leaveTrip(trip.tripId)
+    if (success) alert("여행에서 나갔습니다.")
   }
 }
 
-// 화면 켜지면 여행 목록 불러오기
+// 화면 켜지면 실행
 onMounted(() => {
+  // 1. 일단 바로 불러오기
   tripStore.fetchMyTrips()
+
+  // 2. ★ [추가] 3초마다 목록 새로고침 (실시간 인원수 반영)
+  pollingInterval = setInterval(() => {
+    tripStore.fetchMyTrips()
+  }, 3000)
+})
+
+// 화면 꺼지면(다른 페이지 가면) 폴링 중단
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+  }
 })
 </script>
 
@@ -52,10 +71,10 @@ onMounted(() => {
             <div class="h-32 bg-gradient-to-r from-[#DE2E5F] to-[#b01e45]"></div>
             <div class="px-8 pb-8">
                 <div class="relative flex justify-between items-end -mt-12 mb-6">
-                    <img :src="userStore.userInfo?.profileImg" class="w-32 h-32 rounded-full border-4 border-white bg-white shadow-md object-cover" alt="Profile"/>
+                    <img :src="userStore.userInfo?.profileImg || 'https://placehold.co/150x150'" class="w-32 h-32 rounded-full border-4 border-white bg-white shadow-md object-cover" alt="Profile"/>
                     <button @click="emit('go-edit')" class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors">프로필 수정</button>
                 </div>
-                <h2 class="text-3xl font-bold text-gray-900 mb-1">{{ userStore.userInfo?.name }}</h2>
+                <h2 class="text-3xl font-bold text-gray-900 mb-1">{{ userStore.userInfo?.nickname || userStore.userInfo?.name }}</h2>
                 <div class="flex items-center gap-2 text-gray-500 mb-6"><Mail class="w-4 h-4" />{{ userStore.userInfo?.email }}</div>
             </div>
         </div>
@@ -73,11 +92,12 @@ onMounted(() => {
           @click="handleTripClick(trip)"
         >
           <button 
-            @click.stop="handleDeleteTrip(trip.tripId)"
+            @click.stop="handleDeleteOrLeave(trip)"
             class="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 transition-colors z-10 hover:bg-red-50 rounded-full"
-            title="여행 삭제"
+            :title="trip.ownerId === userStore.userInfo.id ? '여행 삭제' : '여행 나가기'"
           >
-            <Trash2 class="w-5 h-5" />
+            <Trash2 v-if="trip.ownerId === userStore.userInfo.id" class="w-5 h-5" />
+            <LogOut v-else class="w-5 h-5" />
           </button>
 
           <div class="flex justify-between items-start mb-4 pr-8">

@@ -1,6 +1,6 @@
 <script setup>
-import { ref, defineEmits, onMounted, onUnmounted } from 'vue'
-import { MapPin, Search, Sparkles, Edit3, Lock, X, Plus, ArrowLeft, CheckCircle, Calendar, Clock, Type , Copy} from 'lucide-vue-next'
+import { ref, defineEmits, onMounted, onUnmounted, computed } from 'vue'
+import { MapPin, Search, Sparkles, Edit3, Lock, X, Plus, ArrowLeft, CheckCircle, Calendar, Clock, Type , Copy, LogOut, Trash2} from 'lucide-vue-next'
 import MapArea from '@/components/MapArea.vue'
 import ItineraryList from '@/components/ItineraryList.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
@@ -47,8 +47,13 @@ onMounted(async () => {
   }
 })
 
-// ★ 화면 꺼지면 폴링 종료 (필수! 성능 저하 방지)
-onUnmounted(() => {
+// ★ [수정됨] 페이지 나갈 때 '강제 반납' 추가
+onUnmounted(async () => {
+  // 1. 만약 내가 수정 중이었다면? 권한 반납하고 나가기
+  if (isEditing.value) {
+      await tripStore.finishEdit()
+  }
+  // 2. 폴링 종료
   tripStore.stopPolling()
 })
 
@@ -201,6 +206,27 @@ const copyInviteCode = () => {
     alert(`초대 코드 [${tripStore.tripInfo.inviteCode}] 복사 완료!`)
   }
 }
+
+// 내가 방장인지 확인하는 변수
+const isHost = computed(() => {
+    return tripStore.tripInfo.ownerId === userStore.userInfo.id
+})
+
+// 삭제 또는 나가기 처리
+const handleExitOrDelete = async () => {
+    if (isHost.value) {
+        // 방장이면 삭제
+        if (confirm("정말 여행을 삭제하시겠습니까?\n모든 일정과 멤버가 사라집니다.")) {
+            const success = await tripStore.deleteTrip(tripStore.tripInfo.tripId)
+            if (success) emit('back') // 목록으로 이동
+        }
+    } else {
+        if (confirm("정말 이 여행 계획에서 나가시겠습니까?")) {
+            const success = await tripStore.leaveTrip()
+            if (success) emit('back')
+        }
+    }
+}
 </script>
 
 <template>
@@ -249,6 +275,17 @@ const copyInviteCode = () => {
          <button v-else @click="handleRequestEdit" class="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-full hover:border-[#DE2E5F] hover:text-[#DE2E5F] transition-all font-semibold text-gray-600">
             <Edit3 class="h-4 w-4" />
             수정 권한 요청
+         </button>
+
+         <div class="h-8 w-[1px] bg-gray-200 mx-2"></div>
+         
+         <button 
+            @click="handleExitOrDelete"
+            class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+            :title="isHost ? '여행 삭제' : '여행 나가기'"
+         >
+            <Trash2 v-if="isHost" class="w-5 h-5" />
+            <LogOut v-else class="w-5 h-5" />
          </button>
       </div>
     </header>

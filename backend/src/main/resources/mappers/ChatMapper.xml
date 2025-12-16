@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.gitaek.mapper.ChatMapper">
+
+    <select id="findChatRoomIdByTripId" resultType="Integer">
+        SELECT chat_room_id FROM Chat_Room WHERE trip_id = #{tripId}
+    </select>
+
+    <insert id="createChatRoom">
+        INSERT INTO Chat_Room (trip_id, created_at) VALUES (#{tripId}, NOW())
+    </insert>
+
+    <insert id="insertMessage">
+        INSERT INTO Chat_Message (chat_room_id, user_id, content, sent_at)
+        VALUES (#{roomId}, #{userId}, #{content}, NOW())
+    </insert>
+
+    <select id="selectMessages" resultType="com.ssafy.gitaek.dto.ChatMessageDto">
+        SELECT
+        m.message_id,
+        r.trip_id,
+        m.user_id,
+        m.content,
+        DATE_FORMAT(m.sent_at, '%H:%i') as sentAt,
+        u.nickname as senderName,
+        u.role as senderProfileImg -- (프로필 이미지가 없어서 임시로 role 사용하거나 null 처리)
+        FROM Chat_Message m
+        JOIN Chat_Room r ON m.chat_room_id = r.chat_room_id
+        JOIN Users u ON m.user_id = u.user_id
+        WHERE r.trip_id = #{tripId}
+        ORDER BY m.sent_at ASC
+    </select>
+
+</mapper>

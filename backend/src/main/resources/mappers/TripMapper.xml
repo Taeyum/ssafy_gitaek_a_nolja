@@ -6,25 +6,23 @@
 
     <insert id="insertTrip" parameterType="com.ssafy.gitaek.model.Trip" useGeneratedKeys="true" keyProperty="tripId">
         INSERT INTO Trip (
-        title,
-        style,          description,
-        start_date,
-        end_date,
-        owner_id,
-        max_participants,
-        region_id,
-        created_at
+        title, style, description, start_date, end_date,
+        owner_id, max_participants, region_id, created_at, invite_code
         )
         VALUES (
-        #{title},
-        #{style},       #{description},
-        #{startDate},
-        #{endDate},
-        #{ownerId},
-        #{maxParticipants},
-        1,              NOW()
+        #{title}, #{style}, #{description}, #{startDate}, #{endDate},
+        #{ownerId}, #{maxParticipants}, 1, NOW(), #{inviteCode}
         )
     </insert>
+
+    <select id="selectTripByInviteCode" resultType="com.ssafy.gitaek.model.Trip">
+        SELECT * FROM Trip WHERE invite_code = #{inviteCode}
+    </select>
+
+    <select id="checkParticipant" resultType="int">
+        SELECT COUNT(*) FROM Trip_Participant
+        WHERE trip_id = #{tripId} AND user_id = #{userId}
+    </select>
 
     <insert id="insertParticipant">
         INSERT INTO Trip_Participant (trip_id, user_id, joined_at, role)
@@ -42,8 +40,17 @@
     </select>
 
     <select id="selectTripById" resultType="com.ssafy.gitaek.model.Trip">
-        SELECT * FROM Trip WHERE trip_id = #{tripId}
+        SELECT
+        t.*,
+        (SELECT COUNT(*) FROM Trip_Participant tp WHERE tp.trip_id = t.trip_id) as currentParticipants
+        FROM Trip t
+        WHERE t.trip_id = #{tripId}
     </select>
+
+    <delete id="deleteParticipant">
+        DELETE FROM Trip_Participant
+        WHERE trip_id = #{tripId} AND user_id = #{userId}
+    </delete>
 
     <delete id="deleteTripParticipants">
         DELETE FROM Trip_Participant WHERE trip_id = #{tripId}
@@ -54,14 +61,13 @@
     </delete>
 
     <insert id="registSchedule" parameterType="com.ssafy.gitaek.dto.TripScheduleDto">
-        INSERT INTO Trip_Schedule (trip_id, poi_id, trip_day, visit_order, memo)
-        VALUES (#{tripId}, #{poiId}, #{tripDay}, #{visitOrder}, #{memo})
+        INSERT INTO Trip_Schedule (trip_id, poi_id, trip_day, visit_order, memo, schedule_time)
+        VALUES (#{tripId}, #{poiId}, #{tripDay}, #{visitOrder}, #{memo}, #{scheduleTime})
     </insert>
 
     <select id="selectSchedulesByTripId" resultType="com.ssafy.gitaek.dto.TripScheduleDto">
         SELECT
-        s.trip_id, s.poi_id, s.trip_day, s.visit_order, s.memo,
-        p.name as placeName,
+        s.trip_id, s.poi_id, s.trip_day, s.visit_order, s.memo, s.schedule_time, p.name as placeName,
         p.address as placeAddress,
         p.latitude as placeLat,
         p.longitude as placeLng

@@ -31,4 +31,10 @@ public interface TripMapper {
                         @Param("poiId") int poiId);
 
     void updateCurrentEditor(@Param("tripId") int tripId, @Param("userId") Integer userId);
+
+    Trip selectTripByInviteCode(String inviteCode);
+    int checkParticipant(@Param("tripId") int tripId, @Param("userId") int userId);
+
+    // [추가] 멤버 나가기
+    void deleteParticipant(@Param("tripId") int tripId, @Param("userId") int userId);
 }

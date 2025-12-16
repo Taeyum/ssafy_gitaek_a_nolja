@@ -1,61 +1,99 @@
 <script setup>
-import { ref } from 'vue'
-import { Send } from 'lucide-vue-next'
+import { ref, nextTick, watch, onMounted } from 'vue'
+import { Send, User as UserIcon } from 'lucide-vue-next'
+import { useTripStore } from '@/stores/tripStore'
+import { useUserStore } from '@/stores/userStore'
 
-const message = ref("")
-const sampleMessages = ref([
-  { id: "1", user: "김지은", message: "성산일출봉 일정 좋은 것 같아요!", time: "오전 10:23" },
-  { id: "2", user: "나", message: "저도 동의합니다. 한라산은 어때요?", time: "오전 10:25" },
-  { id: "3", user: "박민수", message: "한라산 좋죠! 날씨 확인해봤는데 괜찮을 것 같습니다", time: "오전 10:27" },
-])
+const tripStore = useTripStore()
+const userStore = useUserStore()
 
-const handleSend = () => {
-  if (!message.value.trim()) return
-  
-  sampleMessages.value.push({
-    id: Date.now().toString(),
-    user: "나",
-    message: message.value,
-    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-  })
-  message.value = ""
+const newMessage = ref('')
+const messagesContainer = ref(null)
+
+// 스크롤을 맨 아래로 내리는 함수
+const scrollToBottom = async () => {
+  await nextTick()
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
 }
+
+// 메시지가 오면 스크롤 내리기
+watch(() => tripStore.messages, () => {
+  scrollToBottom()
+}, { deep: true })
+
+const handleSend = async () => {
+  if (!newMessage.value.trim()) return
+  
+  await tripStore.sendMessage(newMessage.value)
+  newMessage.value = '' // 입력창 비우기
+}
+
+onMounted(() => {
+  scrollToBottom()
+})
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col h-full bg-white">
-    <div class="flex-1 overflow-y-auto p-6 space-y-4">
-      <div v-for="msg in sampleMessages" :key="msg.id" class="space-y-1">
-        <div class="flex items-baseline gap-2">
-          <span class="text-sm font-semibold text-gray-900">{{ msg.user }}</span>
-          <span class="text-xs text-gray-400">{{ msg.time }}</span>
+  <div class="flex flex-col h-full bg-white">
+    <div class="p-4 border-b bg-white flex justify-between items-center shadow-sm z-10">
+      <h3 class="font-bold text-lg text-gray-800">💬 실시간 채팅</h3>
+      <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+        참여자 {{ tripStore.tripInfo.currentParticipants || 0 }}명
+      </span>
+    </div>
+
+    <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 scroll-smooth">
+      <div v-if="tripStore.messages.length === 0" class="text-center text-gray-400 text-sm py-10">
+        아직 대화가 없습니다.<br>첫 메시지를 남겨보세요! 👋
+      </div>
+
+      <div 
+        v-for="msg in tripStore.messages" 
+        :key="msg.messageId" 
+        class="flex gap-3"
+        :class="msg.mine ? 'flex-row-reverse' : ''"
+      >
+        <div v-if="!msg.mine" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
+           <UserIcon class="w-5 h-5 text-gray-500" />
         </div>
-        <div 
-          class="px-4 py-2.5 inline-block max-w-[85%] rounded-2xl text-sm leading-relaxed"
-          :class="msg.user === '나' 
-            ? 'bg-[#DE2E5F] text-white rounded-tr-none' 
-            : 'bg-gray-100 text-gray-800 rounded-tl-none'"
-        >
-          {{ msg.message }}
+
+        <div class="flex flex-col max-w-[70%]" :class="msg.mine ? 'items-end' : 'items-start'">
+          <div v-if="!msg.mine" class="text-xs text-gray-500 mb-1 ml-1">
+            {{ msg.senderName }}
+          </div>
+          
+          <div 
+            class="px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm break-words"
+            :class="msg.mine 
+              ? 'bg-[#DE2E5F] text-white rounded-tr-none' 
+              : 'bg-white text-gray-700 border border-gray-100 rounded-tl-none'"
+          >
+            {{ msg.content }}
+          </div>
+          <span class="text-[10px] text-gray-400 mt-1 px-1">
+            {{ msg.sentAt }}
+          </span>
         </div>
       </div>
     </div>
 
-    <div class="border-t p-4 bg-white">
-      <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-full border border-gray-200 focus-within:border-[#DE2E5F] focus-within:ring-1 focus-within:ring-[#DE2E5F] transition-all">
-        <input
-          type="text"
-          placeholder="메시지를 입력하세요..."
-          v-model="message"
-          @keydown.enter="handleSend"
-          class="flex-1 bg-transparent border-none focus:outline-none px-3 text-sm"
+    <div class="p-4 bg-white border-t">
+      <div class="relative flex items-center">
+        <input 
+          v-model="newMessage" 
+          @keydown.enter.prevent="handleSend"
+          type="text" 
+          placeholder="메시지를 입력하세요..." 
+          class="w-full bg-gray-100 text-gray-800 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-[#DE2E5F] focus:bg-white transition-all placeholder-gray-400"
         />
         <button 
-          @click="handleSend" 
-          :disabled="!message.trim()"
-          class="p-2 rounded-full bg-[#DE2E5F] text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#c92552] transition-colors"
+          @click="handleSend"
+          class="absolute right-2 p-2 bg-[#DE2E5F] text-white rounded-full hover:bg-[#c92552] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!newMessage.trim()"
         >
-          <Send class="h-4 w-4" />
+          <Send class="w-4 h-4" />
         </button>
       </div>
     </div>

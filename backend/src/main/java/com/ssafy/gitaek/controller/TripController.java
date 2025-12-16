@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/trips") // ★ 프론트엔드 api/trip.js랑 매칭되는 주소
@@ -150,6 +151,37 @@ public class TripController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("조회 실패");
+        }
+    }
+    // 초대 코드로 입장 API
+    @PostMapping("/join")
+    public ResponseEntity<?> joinTrip(@RequestBody Map<String, String> map, HttpSession session) {
+        User user = (User) session.getAttribute("loginUser");
+        if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+
+        String code = map.get("inviteCode");
+        try {
+            Trip joinedTrip = tripService.joinTripByCode(code, user.getUserId());
+            return ResponseEntity.ok(joinedTrip);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // [추가] 여행 나가기 API: POST /api/trips/{tripId}/leave
+    @PostMapping("/{tripId}/leave")
+    public ResponseEntity<?> leaveTrip(@PathVariable int tripId, HttpSession session) {
+        User user = (User) session.getAttribute("loginUser");
+        if (user == null) return ResponseEntity.status(401).body("로그인이 필요합니다.");
+
+        try {
+            tripService.leaveTrip(tripId, user.getUserId());
+            return ResponseEntity.ok("여행에서 나갔습니다.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("오류 발생");
         }
     }
 }

@@ -10,7 +10,7 @@ public class TripScheduleDto {
     private int tripDay;
     private int visitOrder;
     private String memo;
-
+    private String scheduleTime;
     // ★ [추가] 조회할 때 필요한 관광지 정보 (DB에서 조인해서 가져올 예정)
     private String placeName;
     private String placeAddress;

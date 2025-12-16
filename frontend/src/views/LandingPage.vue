@@ -1,6 +1,6 @@
 <script setup>
 import { ref, defineEmits } from 'vue'
-import { MapPin, Users, MessageSquare, Sparkles, X, Calendar, User, Heart, Type, CheckCircle, ArrowRight, Github, Instagram, Twitter } from 'lucide-vue-next'
+import { MapPin, Users, Sparkles, X, Calendar, User, Heart, Type, ArrowRight, Github, Instagram, Twitter } from 'lucide-vue-next'
 import { useTripStore } from '@/stores/tripStore'
 import { useUserStore } from '@/stores/userStore'
 import AuthModal from '@/components/AuthModal.vue'
@@ -12,6 +12,8 @@ const userStore = useUserStore()
 const showCreateModal = ref(false)
 const showAuthModal = ref(false)
 const authMode = ref('login')
+
+const inviteCodeInput = ref("") // ★ 초대 코드 입력값 저장용
 
 // 입력 폼 데이터
 const tripTitle = ref("")   
@@ -47,6 +49,26 @@ const handleCreateGroup = async () => {
     emit('start')
   }
 }
+
+// ★ [추가] 초대 코드 입장 핸들러
+const handleJoinByCode = async () => {
+  if (!userStore.isLoggedIn) {
+    alert("로그인이 필요합니다.")
+    openAuthModal('login')
+    return
+  }
+  if (!inviteCodeInput.value.trim()) {
+    alert("초대 코드를 입력해주세요.")
+    return
+  }
+
+  const joinedTrip = await tripStore.joinTrip(inviteCodeInput.value)
+  
+  if (joinedTrip) {
+    alert(`[${joinedTrip.title}] 여행에 참가했습니다!`)
+    emit('my-page') // 마이페이지로 이동 (또는 바로 대시보드로 이동 가능)
+  }
+}
 </script>
 
 <template>
@@ -69,8 +91,8 @@ const handleCreateGroup = async () => {
           </template>
           <template v-else>
             <div @click="emit('my-page')" class="flex items-center gap-2 cursor-pointer p-1 pr-3 rounded-full hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200">
-              <img :src="userStore.userInfo.profileImg" class="w-8 h-8 rounded-full bg-gray-100 object-cover" alt="Profile" />
-              <span class="font-bold text-sm text-gray-700">{{ userStore.userInfo.name }}님</span>
+              <img :src="userStore.userInfo.profileImg || 'https://via.placeholder.com/150'" class="w-8 h-8 rounded-full bg-gray-100 object-cover" alt="Profile" />
+              <span class="font-bold text-sm text-gray-700">{{ userStore.userInfo.nickname || userStore.userInfo.name }}님</span>
             </div>
           </template>
         </nav>
@@ -100,7 +122,7 @@ const handleCreateGroup = async () => {
         </div>
       </div>
 
-      <div class="container mx-auto px-6 text-center relative z-10">
+      <div class="container mx-auto px-6 text-center relative z-10 flex flex-col items-center">
         <div class="inline-block mb-4 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-100 text-[#DE2E5F] font-bold text-sm shadow-sm animate-fade-in-up">
           🚀 친구들과 함께 떠나는 국내 여행
         </div>
@@ -113,20 +135,32 @@ const handleCreateGroup = async () => {
           AI가 추천해주는 최적의 경로로 완벽한 여행을 만들어보세요.
         </p>
         
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300 w-full max-w-lg">
           <button 
             @click="showCreateModal = true"
-            class="w-full sm:w-auto px-8 py-4 rounded-full bg-[#DE2E5F] text-white text-lg font-bold shadow-lg shadow-pink-200 hover:bg-[#c92552] hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+            class="w-full sm:w-auto px-8 py-4 rounded-full bg-[#DE2E5F] text-white text-lg font-bold shadow-lg shadow-pink-200 hover:bg-[#c92552] hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
           >
             <Users class="w-5 h-5" />
             그룹 만들고 시작하기
           </button>
           
-          <button class="w-full sm:w-auto px-8 py-4 rounded-full bg-white border-2 border-gray-100 text-gray-700 text-lg font-bold hover:border-[#DE2E5F] hover:text-[#DE2E5F] hover:shadow-md transition-all flex items-center justify-center gap-2 group">
-            참여 코드로 입장
-            <ArrowRight class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          <div class="relative w-full sm:w-auto flex-1 group">
+             <input 
+                v-model="inviteCodeInput" 
+                type="text" 
+                placeholder="참여 코드 입력" 
+                class="w-full pl-6 pr-14 py-4 rounded-full border-2 border-gray-100 bg-white/80 backdrop-blur text-gray-700 font-bold focus:border-[#DE2E5F] focus:outline-none transition-all shadow-sm group-hover:shadow-md uppercase"
+                @keyup.enter="handleJoinByCode"
+             />
+             <button 
+                @click="handleJoinByCode"
+                class="absolute right-2 top-2 bottom-2 w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white hover:bg-[#DE2E5F] transition-colors shadow-md"
+             >
+                <ArrowRight class="w-5 h-5" />
+             </button>
+          </div>
         </div>
+
       </div>
     </section>
 

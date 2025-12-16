@@ -24,7 +24,7 @@
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a">
-      <console name="Connection" type="STANDARD" schema="ssafy_trip" session="Main" />
+      <console name="Connection" type="STANDARD" schema="ssafy_trip" session="Main"><![CDATA[select * from `Trip_Schedule`;]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseEditorStateManager">

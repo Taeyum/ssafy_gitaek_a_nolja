@@ -50,6 +50,7 @@ CREATE TABLE Trip (
     max_participants  INT DEFAULT 4,
     region_id         INT NOT NULL,
     current_editor_id INT DEFAULT NULL, -- ★ [추가] 현재 수정 중인 유저 ID (동시성 제어용)
+    invite_code       VARCHAR(50) DEFAULT NULL,
     created_at        DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -69,7 +70,8 @@ CREATE TABLE Trip_Schedule (
     visit_order INT,
     memo        TEXT,
     trip_id     INT NOT NULL,
-    poi_id      INT NOT NULL
+    poi_id      INT NOT NULL,
+    schedule_time VARCHAR(10) DEFAULT '12:00'
 );
 
 -- [7] 채팅방 (Chat_Room)

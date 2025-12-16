@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class TripService {
@@ -32,11 +33,38 @@ public class TripService {
         trip.setStartDate(start);
         trip.setEndDate(start.plusDays(request.getDuration() - 1));
 
+        // ★ [추가] 랜덤 초대 코드 생성 (8자리 대문자)
+        String randomCode = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        trip.setInviteCode(randomCode);
+
         tripMapper.insertTrip(trip);
         tripMapper.insertParticipant(trip.getTripId(), ownerId, "HOST");
 
         return trip;
     }
+
+    // 초대 코드로 입장하기
+    @Transactional
+    public Trip joinTripByCode(String code, int userId) throws Exception {
+        Trip trip = tripMapper.selectTripByInviteCode(code);
+        if (trip == null) {
+            throw new Exception("유효하지 않은 초대 코드입니다.");
+        }
+
+        // 2. 이미 참가 중인지 확인
+        int count = tripMapper.checkParticipant(trip.getTripId(), userId);
+        if (count > 0) {
+            return trip; // 이미 참가 중이면 그냥 성공 처리
+        }
+
+        // 3. 인원 꽉 찼는지 확인 (선택 사항)
+        if (trip.getCurrentParticipants() >= trip.getMaxParticipants()) throw new Exception("정원이 초과되었습니다.");
+
+        // 4. 참가자로 등록
+        tripMapper.insertParticipant(trip.getTripId(), userId, "MEMBER");
+        return trip;
+    }
+
 
     public List<Trip> getMyTrips(int userId) {
         return tripMapper.selectMyTrips(userId);
@@ -106,4 +134,17 @@ public class TripService {
         }
     }
 
+    // [추가] 여행 나가기 (멤버용)
+    @Transactional
+    public void leaveTrip(int tripId, int userId) {
+        Trip trip = tripMapper.selectTripById(tripId);
+        if (trip == null) throw new RuntimeException("여행이 존재하지 않습니다.");
+
+        // 방장이 나가려고 하면 막음
+        if (trip.getOwnerId() == userId) {
+            throw new RuntimeException("방장은 나갈 수 없습니다. 여행을 삭제해주세요.");
+        }
+
+        tripMapper.deleteParticipant(tripId, userId);
+    }
 }
