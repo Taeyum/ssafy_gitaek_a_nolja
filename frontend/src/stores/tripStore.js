@@ -1,169 +1,273 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
-import { 
-  createTripApi, 
-  getMyTripsApi, 
-  deleteTripApi, 
-  addScheduleApi, 
-  getSchedulesApi, 
+import { ref } from "vue";
+import { defineStore } from "pinia";
+import {
+  createTripApi,
+  getMyTripsApi,
+  deleteTripApi,
+  addScheduleApi,
+  getSchedulesApi,
   deleteScheduleApi,
-  requestEditApi,     
-  releaseEditApi,     
+  requestEditApi,
+  releaseEditApi,
   getTripStatusApi,
   joinTripApi,
   leaveTripApi,
   getMessagesApi,
-  sendMessageApi
-} from '@/api/trip'
+  sendMessageApi,
+} from "@/api/trip";
 
-export const useTripStore = defineStore('trip', () => {
+export const useTripStore = defineStore("trip", () => {
   // --- 상태 (State) ---
   const tripInfo = ref({
     tripId: 0,
-    title: '',
+    title: "",
     duration: 2,
-    startDate: '',
-    endDate: '',
+    startDate: "",
+    endDate: "",
     maxMembers: 4,
     currentMembers: [],
-    inviteCode: '',
-    style: 'friend'
-  })
+    inviteCode: "",
+    style: "friend",
+    ownerId: 0,
+    currentParticipants: 1,
+  });
 
-  const itinerary = ref([])
-  const myTrips = ref([])
-  const messages = ref([])
-  
+  const itinerary = ref([]);
+  const myTrips = ref([]);
+  const messages = ref([]);
+
   // 동시성 제어용
-  const currentEditorName = ref(null) 
-  const isLocked = ref(false)         
-  let pollingInterval = null          
+  const currentEditorName = ref(null);
+  const isLocked = ref(false);
+  let pollingInterval = null;
 
   // --- 액션 (Actions) ---
 
   const fetchMyTrips = async () => {
     try {
-      const response = await getMyTripsApi()
-      myTrips.value = response.data
+      const response = await getMyTripsApi();
+      myTrips.value = response.data;
     } catch (error) {
-      console.error("여행 목록 로드 실패", error)
+      console.error("여행 목록 로드 실패", error);
     }
-  }
+  };
 
-  const loadTrip = async (trip) => { 
+  // ★ [수정 1] loadTrip: 날짜 계산 + 변수명 방어 로직 (하이브리드)
+  const loadTrip = async (rawTrip) => {
+    // 1. 변수명 통일 (Normalization)
+    // 백엔드가 어떤 형태(DTO/Map)로 주든 다 받아냅니다.
+    const normalizedData = {
+      tripId: rawTrip.tripId || rawTrip.trip_id,
+      title: rawTrip.title,
+      startDate: rawTrip.startDate || rawTrip.start_date,
+      endDate: rawTrip.endDate || rawTrip.end_date,
+      maxMembers:
+        rawTrip.maxMembers ||
+        rawTrip.maxParticipants ||
+        rawTrip.max_members ||
+        rawTrip.max_participants ||
+        4,
+      currentParticipants:
+        rawTrip.currentParticipants ||
+        rawTrip.currentMembers ||
+        rawTrip.current_participants ||
+        1,
+      inviteCode: rawTrip.inviteCode || rawTrip.invite_code || "",
+      ownerId: rawTrip.ownerId || rawTrip.owner_id,
+      style: rawTrip.style || "friend",
+      // DB에 duration 없으면 0으로 둠 (아래서 계산)
+      duration: rawTrip.duration || 0,
+    };
+
+    // 2. 기간(Duration) 정밀 계산
+    // DB에 duration 컬럼이 없으므로, 날짜 차이를 계산해서 복원합니다.
+    let dayCount = normalizedData.duration;
+
+    // 기간 정보가 없으면 날짜 차이로 계산
+    if (!dayCount || dayCount < 1) {
+      const start = new Date(normalizedData.startDate);
+      const end = new Date(normalizedData.endDate);
+
+      if (!isNaN(start) && !isNaN(end)) {
+        const diffTime = end.getTime() - start.getTime();
+        // (종료일 - 시작일) / 하루 + 1일 = 기간
+        dayCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      } else {
+        dayCount = 1; // 날짜 깨지면 기본 1일
+      }
+    }
+
+    // 최소 1일 보장 (안전장치)
+    dayCount = Math.max(1, dayCount);
+
+    // 3. 상태 업데이트
     tripInfo.value = {
-      tripId: trip.tripId,
-      title: trip.title,
-      startDate: trip.startDate,
-      endDate: trip.endDate,
-      style: trip.style,
-      maxMembers: trip.maxParticipants,
-      currentParticipants: trip.currentParticipants || 1,
-      inviteCode: trip.inviteCode || 'CODE_ERR' ,
-      ownerId: trip.ownerId
-    }
+      ...normalizedData,
+      duration: dayCount,
+    };
 
-    // 날짜 틀 생성
-    const start = new Date(trip.startDate)
-    const end = new Date(trip.endDate)
-    const diffTime = Math.abs(end - start)
-    const dayCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+    // 4. 일정 배열 틀(Itinerary) 생성
+    // (계산된 기간만큼 반복문을 돕니다)
+    const newItinerary = [];
+    const startDateObj = new Date(normalizedData.startDate);
 
-    const newItinerary = []
     for (let i = 0; i < dayCount; i++) {
-        const currentDate = new Date(start)
-        currentDate.setDate(start.getDate() + i)
-        newItinerary.push({ 
-            id: (i + 1).toString(), 
-            day: `${i + 1}일차`,    
-            date: currentDate.toISOString().split('T')[0],       
-            items: [] 
-        })
+      const currentDate = new Date(startDateObj);
+      // 날짜 유효성 체크 후 더하기
+      if (!isNaN(startDateObj)) {
+        currentDate.setDate(startDateObj.getDate() + i);
+      }
+
+      let dateStr = "날짜 미정";
+      try {
+        dateStr = currentDate.toISOString().split("T")[0];
+      } catch (e) {}
+
+      newItinerary.push({
+        id: (i + 1).toString(),
+        day: `${i + 1}일차`,
+        date: dateStr,
+        items: [],
+      });
     }
 
-    // 일정 데이터 매핑
-    try {
-      const res = await getSchedulesApi(trip.tripId)
-      const dbSchedules = res.data
-      
-      dbSchedules.forEach(item => {
-        const dayIndex = item.tripDay - 1
-        if (newItinerary[dayIndex]) {
-          newItinerary[dayIndex].items.push({
-            id: Date.now() + Math.random().toString(),
-            time: item.scheduleTime,
-            name: item.placeName,
-            location: item.placeAddress,
-            lat: item.placeLat,
-            lng: item.placeLng,
-            poiId: item.poiId
-          })
-        }
-      })
-    } catch (error) {
-      console.error("일정 데이터 로드 실패", error)
-    }
-    
-    itinerary.value = newItinerary
-  }
+    // 화면 먼저 그리기
+    itinerary.value = newItinerary;
 
+    // 5. DB 세부 일정 데이터 채우기
+    await refreshItinerary(newItinerary);
+  };
+
+  // ★ [수정 2] createNewTrip: 종료일 직접 계산해서 전송 (핵심!)
   const createNewTrip = async (info) => {
     try {
-      const response = await createTripApi({
+      // 1. 기간 안전장치 (0이나 빈값이면 1일로 강제)
+      let safeDuration = parseInt(info.duration);
+      if (isNaN(safeDuration) || safeDuration < 1) {
+        safeDuration = 1;
+      }
+
+      // 2. 종료일 계산 (시작일 + 기간 - 1)
+      const start = new Date(info.startDate);
+      const end = new Date(start);
+      // 예: 23일 시작, 1일 기간 -> 23 + 0 = 23일 종료 (정상)
+      end.setDate(start.getDate() + (safeDuration - 1));
+
+      const endDateStr = end.toISOString().split("T")[0];
+
+      // 3. 백엔드 전송 (endDate 필수 포함!)
+      const payload = {
         title: info.title,
-        duration: info.duration,
+        startDate: info.startDate,
+        endDate: endDateStr, // ★ 계산된 종료일 전송
+        duration: safeDuration, // ★ 안전한 기간 전송
+        maxParticipants: info.members,
+        style: info.style,
+      };
+
+      console.log("🚀 여행 생성 요청:", payload);
+
+      const response = await createTripApi(payload);
+      const savedTrip = response.data;
+
+      // 4. 저장 직후에는 백엔드 응답을 기다리지 말고, 내가 계산한 값으로 즉시 로딩
+      // (백엔드가 duration을 안 줘도 화면은 정상 작동하게 함)
+      const optimisticTripData = {
+        ...savedTrip, // ID나 코드 등은 백엔드꺼 사용
+        title: info.title,
+        startDate: info.startDate,
+        endDate: endDateStr,
+        duration: safeDuration, // 내가 보낸 기간 그대로 사용
         maxMembers: info.members,
         style: info.style,
-        startDate: info.startDate
-      })
-      const savedTrip = response.data
-      
-      // 생성 직후 바로 로드
-      tripInfo.value = {
-        tripId: savedTrip.tripId,
-        title: savedTrip.title,
-        startDate: savedTrip.startDate,
-        endDate: savedTrip.endDate,
-        inviteCode: savedTrip.inviteCode,
-        ownerId: savedTrip.ownerId,
-        maxMembers: savedTrip.maxParticipants, 
-        currentParticipants: 1, 
-        style: savedTrip.style
-      }
-      const newItinerary = []
-      for (let i = 1; i <= info.duration; i++) {
-        newItinerary.push({
-          id: i.toString(),
-          day: `${i}일차`,
-          date: `Day ${i}`,
-          items: []
-        })
-      }
-      itinerary.value = newItinerary
-      return true
+      };
+
+      await loadTrip(optimisticTripData);
+      return true;
     } catch (error) {
-      alert("여행 생성 실패")
-      return false
+      console.error("여행 생성 실패:", error);
+      alert("여행 생성 중 오류가 발생했습니다.");
+      return false;
     }
-  }
+  };
+
+  // ★ [수정 3] refreshItinerary: 변수명 방어 로직 추가
+  const refreshItinerary = async (targetItinerary = null) => {
+    if (!tripInfo.value.tripId) return;
+
+    const currentItinerary = targetItinerary || itinerary.value;
+
+    try {
+      const res = await getSchedulesApi(tripInfo.value.tripId);
+      const dbSchedules = res.data || [];
+
+      // 내용 비우기
+      currentItinerary.forEach((day) => {
+        day.items = [];
+      });
+
+      dbSchedules.forEach((item) => {
+        // [변수명 방어] DB: trip_day vs JS: tripDay
+        const tripDay = item.tripDay || item.trip_day || 1;
+        const dayIndex = tripDay - 1;
+
+        if (currentItinerary[dayIndex]) {
+          // [변수명 방어] DB: schedule_time
+          let rawTime = item.scheduleTime || item.schedule_time || "12:00";
+          let cleanTime =
+            rawTime.length > 5 ? rawTime.substring(0, 5) : rawTime;
+
+          currentItinerary[dayIndex].items.push({
+            id: item.scheduleId
+              ? String(item.scheduleId)
+              : String(Date.now() + Math.random()),
+            time: cleanTime,
+            name:
+              item.placeName || item.place_name || item.name || "장소명 없음",
+            location:
+              item.placeAddress || item.place_address || item.address || "",
+            lat: item.placeLat || item.latitude || 0,
+            lng: item.placeLng || item.longitude || 0,
+            poiId: item.poiId || item.poi_id,
+          });
+        }
+      });
+
+      // 시간순 정렬
+      currentItinerary.forEach((day) => {
+        day.items.sort((a, b) => a.time.localeCompare(b.time));
+      });
+
+      if (targetItinerary) {
+        itinerary.value = currentItinerary;
+      }
+    } catch (error) {
+      console.error("일정 동기화 실패", error);
+    }
+  };
+
+  // ... (이하 기존 기능 유지) ...
 
   const addPlace = async (dayId, place, time) => {
-    const targetDay = itinerary.value.find(d => d.id === dayId)
-    if (!targetDay) return
+    const targetDay = itinerary.value.find((d) => d.id === dayId);
+    if (!targetDay) return;
 
-    const inputTime = time ? time : "12:00"
+    const inputTime = time ? time : "12:00";
 
     // 중복 체크
-    if (targetDay.items.some(item => item.poiId === place.poiId)) {
-        alert(`[${place.name}] 이미 추가된 장소입니다!`);
-        return; 
-    }
-    if (targetDay.items.some(item => item.time === inputTime)) {
-        alert(`선택하신 시간(${inputTime})에 이미 일정이 있습니다.`);
-        return; 
+    if (
+      targetDay.items.some((item) => {
+        // 시간 비교 시 초 단위 제거
+        const itemTimeSimple = item.time.substring(0, 5);
+        const inputTimeSimple = inputTime.substring(0, 5);
+        return itemTimeSimple === inputTimeSimple && item.poiId !== place.poiId;
+      })
+    ) {
+      alert(`선택하신 시간(${inputTime})에는 이미 다른 일정이 있습니다!`);
+      return;
     }
 
-    const tempId = Date.now().toString()
+    const tempId = Date.now().toString();
     const newItem = {
       id: tempId,
       time: inputTime,
@@ -171,240 +275,205 @@ export const useTripStore = defineStore('trip', () => {
       location: place.address || "",
       lat: place.lat || 0,
       lng: place.lng || 0,
-      poiId: place.poiId 
-    }
-    
-    targetDay.items.push(newItem)
-    targetDay.items.sort((a, b) => a.time.localeCompare(b.time))
+      poiId: place.poiId,
+    };
+
+    targetDay.items.push(newItem);
+    targetDay.items.sort((a, b) => a.time.localeCompare(b.time));
 
     try {
-      const dayNumber = parseInt(dayId.replace(/[^0-9]/g, "")) || 1; 
+      const dayNumber = parseInt(dayId); // 숫자 변환
       await addScheduleApi({
-        tripId: tripInfo.value.tripId, 
-        poiId: place.poiId,            
-        tripDay: dayNumber,           
-        visitOrder: targetDay.items.length, 
+        tripId: tripInfo.value.tripId,
+        poiId: place.poiId,
+        tripDay: dayNumber,
+        visitOrder: targetDay.items.length,
         memo: "",
-        scheduleTime: inputTime                       
-      })
+        scheduleTime: inputTime,
+      });
     } catch (error) {
-      alert("저장 실패. 다시 시도해주세요.")
-      targetDay.items = targetDay.items.filter(item => item.id !== tempId) // 롤백
+      alert("저장 실패. 다시 시도해주세요.");
+      targetDay.items = targetDay.items.filter((item) => item.id !== tempId);
     }
-  }
+  };
 
   const editItem = (dayId, itemId, newTime, newName) => {
-    // (기존 코드 유지 - 단순 화면 업데이트용이라면)
-    const targetDay = itinerary.value.find(d => d.id === dayId)
+    const targetDay = itinerary.value.find((d) => d.id === dayId);
     if (targetDay) {
-      const item = targetDay.items.find(i => i.id === itemId)
+      const item = targetDay.items.find((i) => i.id === itemId);
       if (item) {
-        item.time = newTime
-        item.name = newName
-        targetDay.items.sort((a, b) => a.time.localeCompare(b.time))
+        item.time = newTime;
+        item.name = newName;
+        targetDay.items.sort((a, b) => a.time.localeCompare(b.time));
       }
     }
-  }
+  };
 
   const removePlace = async (dayId, itemId) => {
-    const targetDay = itinerary.value.find(d => d.id === dayId)
-    if (!targetDay) return
-    const itemToRemove = targetDay.items.find(item => item.id === itemId)
-    if (!itemToRemove) return
+    const targetDay = itinerary.value.find((d) => d.id === dayId);
+    if (!targetDay) return;
+    const itemToRemove = targetDay.items.find((item) => item.id === itemId);
+    if (!itemToRemove) return;
 
     try {
-      const dayNumber = parseInt(dayId.replace(/[^0-9]/g, "")) || 1;
-      await deleteScheduleApi(tripInfo.value.tripId, dayNumber, itemToRemove.poiId)
-      targetDay.items = targetDay.items.filter(item => item.id !== itemId)
+      const dayNumber = parseInt(dayId);
+      await deleteScheduleApi(
+        tripInfo.value.tripId,
+        dayNumber,
+        itemToRemove.poiId
+      );
+      targetDay.items = targetDay.items.filter((item) => item.id !== itemId);
     } catch (error) {
-      alert("삭제 실패")
+      alert("삭제 실패");
     }
-  }
+  };
 
   const deleteTrip = async (tripId) => {
     try {
-      await deleteTripApi(tripId)
-      await fetchMyTrips() 
-      return true
-    } catch (error) { return false }
-  }
+      await deleteTripApi(tripId);
+      await fetchMyTrips();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
 
   const joinTrip = async (code) => {
     try {
-      const response = await joinTripApi(code)
-      return response.data
+      const response = await joinTripApi(code);
+      return response.data;
     } catch (error) {
-      alert(error.response?.data || "입장 실패")
-      return null
+      alert(error.response?.data || "입장 실패");
+      return null;
     }
-  }
+  };
 
-  // ★ [추가] DB에서 최신 일정 가져와서 덮어쓰기 (새로고침 없이 반영)
-  const refreshItinerary = async () => {
-    if (!tripInfo.value.tripId) return
-
-    try {
-      const res = await getSchedulesApi(tripInfo.value.tripId)
-      const dbSchedules = res.data
-
-      // 1. 기존 일정 초기화 (날짜 틀은 유지하고 아이템만 비움)
-      itinerary.value.forEach(day => {
-        day.items = []
-      })
-
-      // 2. DB 데이터 다시 채워넣기
-      dbSchedules.forEach(item => {
-        const dayIndex = item.tripDay - 1
-        if (itinerary.value[dayIndex]) {
-          itinerary.value[dayIndex].items.push({
-            // 프론트에서 관리할 ID (DB ID가 없으면 임시로 만듦)
-            id: item.scheduleId ? String(item.scheduleId) : String(Date.now() + Math.random()),
-            time: item.scheduleTime,
-            name: item.placeName,
-            location: item.placeAddress,
-            lat: item.placeLat,
-            lng: item.placeLng,
-            poiId: item.poiId
-          })
-        }
-      })
-    } catch (error) {
-      console.error("일정 동기화 실패", error)
-    }
-  }
-
-  // ★ [수정됨] 폴링 로직 (Lock 확인 + 데이터 동기화)
   const checkStatus = async (userId) => {
+    if (!tripInfo.value.tripId) return;
+
     try {
-      // 1. 여행 상태(Lock, 인원수) 확인
-      const res = await getTripStatusApi(tripInfo.value.tripId)
-      const trip = res.data
-      
-      // 인원수 갱신
+      const res = await getTripStatusApi(tripInfo.value.tripId);
+      const trip = res.data;
+
       if (trip.currentParticipants) {
-          tripInfo.value.currentParticipants = trip.currentParticipants
+        tripInfo.value.currentParticipants = trip.currentParticipants;
       }
 
-      await fetchMessages()
-      
-      // 2. Lock 상태 처리
+      await fetchMessages();
+
       if (trip.currentEditorId) {
-          if (trip.currentEditorId !== userId) {
-              currentEditorName.value = "다른 사용자" 
-              isLocked.value = true
-              
-              // ★ 중요: 남이 수정 중이거나, 아무도 수정 안 할때는
-              // 최신 데이터를 계속 받아와야 함!
-              await refreshItinerary()
-              
-          } else {
-              currentEditorName.value = "나"
-              isLocked.value = false
-              // (내가 수정 중일 때는 불러오지 않음 -> 내 화면이 깜빡거리거나 입력 중인게 날아갈 수 있어서)
-          }
+        if (trip.currentEditorId !== userId) {
+          currentEditorName.value = "다른 멤버";
+          isLocked.value = true;
+          await refreshItinerary();
+        } else {
+          currentEditorName.value = "나";
+          isLocked.value = false;
+        }
       } else {
-          // 아무도 수정 안 하는 상태 -> 최신 데이터 동기화
-          currentEditorName.value = null
-          isLocked.value = false
-          await refreshItinerary()
+        currentEditorName.value = null;
+        isLocked.value = false;
+        await refreshItinerary();
       }
-
-    } catch (e) { 
-      // console.error(e) 
-    }
-  }
+    } catch (e) {}
+  };
 
   const startPolling = (userId) => {
-    if (pollingInterval) return 
-    
-    // 1. 시작하자마자 1번 즉시 실행 (딜레이 없음)
-    checkStatus(userId)
+    if (pollingInterval) return;
+    if (!userId) return;
 
-    // 2. 1초마다 계속 확인 (3초 -> 1초로 단축)
+    checkStatus(userId);
     pollingInterval = setInterval(() => {
-        checkStatus(userId)
-    }, 1000) 
-  }
+      checkStatus(userId);
+    }, 2000);
+  };
 
   const stopPolling = () => {
     if (pollingInterval) {
-      clearInterval(pollingInterval)
-      pollingInterval = null
+      clearInterval(pollingInterval);
+      pollingInterval = null;
     }
-  }
+  };
 
   const tryRequestEdit = async () => {
-    if (!tripInfo.value.tripId) return false
+    if (!tripInfo.value.tripId) return false;
     try {
-      await requestEditApi(tripInfo.value.tripId)
-      // 성공하자마자 상태 업데이트
-      currentEditorName.value = "나"
-      isLocked.value = false
-      return true
+      await requestEditApi(tripInfo.value.tripId);
+      currentEditorName.value = "나";
+      isLocked.value = false;
+      return true;
     } catch (error) {
-      if (error.response?.status === 409) alert("다른 사용자가 수정 중입니다!")
-      else alert("오류가 발생했습니다.")
-      return false
+      if (error.response?.status === 409)
+        alert("다른 사용자가 이미 수정 중입니다.");
+      else alert("권한 요청 실패");
+      return false;
     }
-  }
+  };
 
   const finishEdit = async () => {
     try {
-      await releaseEditApi(tripInfo.value.tripId)
-      currentEditorName.value = null
-      return true
-    } catch (e) { console.error(e) }
-  }
+      await releaseEditApi(tripInfo.value.tripId);
+      currentEditorName.value = null;
+      return true;
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-  // [수정] 여행 나가기 (ID를 직접 받을 수도 있게 변경)
   const leaveTrip = async (targetTripId = null) => {
-    // 1. 파라미터로 받은 ID가 있으면 그거 쓰고, 없으면 현재 로드된 여행 ID 사용
-    const idToDelete = targetTripId || tripInfo.value.tripId
-    
-    if (!idToDelete) {
-        alert("나갈 여행이 선택되지 않았습니다.")
-        return false
-    }
-
-    if (!confirm("정말 이 여행 계획에서 나가시겠습니까?")) return false
+    const idToDelete = targetTripId || tripInfo.value.tripId;
+    if (!idToDelete) return false;
 
     try {
-      await leaveTripApi(idToDelete)
-      await fetchMyTrips() // 목록 새로고침
-      return true
+      await leaveTripApi(idToDelete);
+      await fetchMyTrips();
+      return true;
     } catch (error) {
-      alert(error.response?.data || "나가기 실패")
-      return false
+      alert(error.response?.data || "나가기 실패");
+      return false;
     }
-  }
+  };
 
-  // 채팅 목록 불러오기
   const fetchMessages = async () => {
-    if (!tripInfo.value.tripId) return
+    if (!tripInfo.value.tripId) return;
     try {
-      const res = await getMessagesApi(tripInfo.value.tripId)
-      messages.value = res.data
-    } catch (e) {
-      // console.error(e)
-    }
-  }
+      const res = await getMessagesApi(tripInfo.value.tripId);
+      messages.value = res.data;
+    } catch (e) {}
+  };
 
-  // 메시지 전송
   const sendMessage = async (content) => {
-    if (!content.trim()) return
+    if (!content.trim()) return;
     try {
-      await sendMessageApi(tripInfo.value.tripId, content)
-      await fetchMessages() // 전송 후 바로 갱신
+      await sendMessageApi(tripInfo.value.tripId, content);
+      await fetchMessages();
     } catch (e) {
-      alert("메시지 전송 실패")
+      alert("메시지 전송 실패");
     }
-  }
+  };
 
-  return { 
-    tripInfo, itinerary, myTrips, 
-    currentEditorName, isLocked, 
-    fetchMyTrips, loadTrip, createNewTrip, addPlace, editItem, removePlace, deleteTrip, joinTrip,
-    startPolling, stopPolling, tryRequestEdit, finishEdit ,
-    leaveTrip, messages, fetchMessages, sendMessage
-  }
-})
+  return {
+    tripInfo,
+    itinerary,
+    myTrips,
+    currentEditorName,
+    isLocked,
+    fetchMyTrips,
+    loadTrip,
+    createNewTrip,
+    addPlace,
+    editItem,
+    removePlace,
+    deleteTrip,
+    joinTrip,
+    startPolling,
+    stopPolling,
+    tryRequestEdit,
+    finishEdit,
+    leaveTrip,
+    messages,
+    fetchMessages,
+    sendMessage,
+    refreshItinerary,
+  };
+});

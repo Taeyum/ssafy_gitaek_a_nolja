@@ -1,90 +1,114 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.ssafy.gitaek.mapper.TripMapper">
 
-    <insert id="insertTrip" parameterType="com.ssafy.gitaek.model.Trip" useGeneratedKeys="true" keyProperty="tripId">
-        INSERT INTO Trip (
-        title, style, description, start_date, end_date,
-        owner_id, max_participants, region_id, created_at, invite_code
-        )
-        VALUES (
-        #{title}, #{style}, #{description}, #{startDate}, #{endDate},
-        #{ownerId}, #{maxParticipants}, 1, NOW(), #{inviteCode}
-        )
-    </insert>
+	<insert id="insertTrip"
+		parameterType="com.ssafy.gitaek.model.Trip" useGeneratedKeys="true"
+		keyProperty="tripId">
+		INSERT INTO Trip (title, style, description, start_date,
+		end_date, owner_id, max_participants, region_id, created_at,
+		invite_code)
+		VALUES (#{title}, #{style}, #{description}, #{startDate},
+		#{endDate}, #{ownerId}, #{maxParticipants}, #{regionId}, NOW(),
+		#{inviteCode})
+	</insert>
 
-    <select id="selectTripByInviteCode" resultType="com.ssafy.gitaek.model.Trip">
-        SELECT * FROM Trip WHERE invite_code = #{inviteCode}
-    </select>
+	<insert id="insertParticipant">
+		INSERT INTO Trip_Participant (trip_id, user_id,
+		joined_at, role)
+		VALUES (#{tripId}, #{userId}, NOW(), #{role})
+	</insert>
 
-    <select id="checkParticipant" resultType="int">
-        SELECT COUNT(*) FROM Trip_Participant
-        WHERE trip_id = #{tripId} AND user_id = #{userId}
-    </select>
+	<select id="selectMyTrips" resultType="com.ssafy.gitaek.model.Trip">
+		SELECT t.trip_id AS tripId, 
+		       t.title, 
+		       t.style,
+		       t.start_date AS startDate, 
+		       t.end_date AS endDate, 
+		       t.owner_id AS ownerId, 
+		       t.max_participants AS maxParticipants,
+		       t.region_id AS regionId, 
+		       t.current_editor_id AS currentEditorId,
+		       t.invite_code AS inviteCode,  (SELECT COUNT(*) FROM Trip_Participant WHERE trip_id = t.trip_id) AS currentParticipants
+		  FROM Trip t
+		  JOIN Trip_Participant tp ON t.trip_id = tp.trip_id
+		 WHERE tp.user_id = #{userId}
+		 ORDER BY t.start_date ASC
+	</select>
 
-    <insert id="insertParticipant">
-        INSERT INTO Trip_Participant (trip_id, user_id, joined_at, role)
-        VALUES (#{tripId}, #{userId}, NOW(), #{role})
-    </insert>
+	<select id="selectTripById" resultType="com.ssafy.gitaek.model.Trip">
+		SELECT t.trip_id AS tripId, 
+		       t.title, 
+		       t.style,
+		       t.description,
+		       t.start_date AS startDate, 
+		       t.end_date AS endDate, 
+		       t.owner_id AS ownerId, 
+		       t.max_participants AS maxParticipants, t.region_id AS regionId, 
+		       t.current_editor_id AS currentEditorId,
+		       t.invite_code AS inviteCode,
+		       (SELECT COUNT(*) FROM Trip_Participant WHERE trip_id = t.trip_id) AS currentParticipants
+		  FROM Trip t
+		 WHERE t.trip_id = #{tripId}
+	</select>
 
-    <select id="selectMyTrips" parameterType="int" resultType="com.ssafy.gitaek.model.Trip">
-        SELECT
-        t.*,
-        (SELECT COUNT(*) FROM Trip_Participant tp2 WHERE tp2.trip_id = t.trip_id) as currentParticipants
-        FROM Trip t
-        JOIN Trip_Participant tp ON t.trip_id = tp.trip_id
-        WHERE tp.user_id = #{userId}
-        ORDER BY t.start_date DESC
-    </select>
+	<delete id="deleteTrip">
+		DELETE FROM Trip WHERE trip_id = #{tripId}
+	</delete>
 
-    <select id="selectTripById" resultType="com.ssafy.gitaek.model.Trip">
-        SELECT
-        t.*,
-        (SELECT COUNT(*) FROM Trip_Participant tp WHERE tp.trip_id = t.trip_id) as currentParticipants
-        FROM Trip t
-        WHERE t.trip_id = #{tripId}
-    </select>
+	<insert id="registSchedule"
+		parameterType="com.ssafy.gitaek.dto.TripScheduleDto">
+		INSERT INTO Trip_Schedule (trip_id, poi_id, trip_day,
+		visit_order, memo, schedule_time)
+		VALUES (#{tripId}, #{poiId},
+		#{tripDay},
+		(SELECT IFNULL(MAX(visit_order), 0) + 1 FROM Trip_Schedule T WHERE
+		trip_id=#{tripId} AND trip_day=#{tripDay}),
+		#{memo}, #{scheduleTime})
+	</insert>
 
-    <delete id="deleteParticipant">
-        DELETE FROM Trip_Participant
-        WHERE trip_id = #{tripId} AND user_id = #{userId}
-    </delete>
+	<select id="selectSchedulesByTripId"
+		resultType="com.ssafy.gitaek.dto.TripScheduleDto">
+		SELECT s.schedule_id AS scheduleId, s.trip_day AS tripDay,
+		s.visit_order AS visitOrder,
+		s.memo, s.schedule_time AS scheduleTime, s.poi_id AS poiId,
+		p.name AS placeName, p.address AS placeAddress, p.latitude AS placeLat,
+		p.longitude AS placeLng, p.thumbnail_url AS thumbnailUrl
+		FROM Trip_Schedule s
+		JOIN POI p ON s.poi_id = p.poi_id
+		WHERE s.trip_id = #{tripId}
+		ORDER BY s.trip_day, s.visit_order
+	</select>
 
-    <delete id="deleteTripParticipants">
-        DELETE FROM Trip_Participant WHERE trip_id = #{tripId}
-    </delete>
+	<delete id="deleteSchedule">
+		DELETE FROM Trip_Schedule WHERE trip_id = #{tripId}
+		AND trip_day = #{tripDay} AND poi_id = #{poiId}
+	</delete>
 
-    <delete id="deleteTrip">
-        DELETE FROM Trip WHERE trip_id = #{tripId}
-    </delete>
+	<update id="updateCurrentEditor">
+		UPDATE Trip SET current_editor_id = #{userId} WHERE
+		trip_id = #{tripId}
+	</update>
 
-    <insert id="registSchedule" parameterType="com.ssafy.gitaek.dto.TripScheduleDto">
-        INSERT INTO Trip_Schedule (trip_id, poi_id, trip_day, visit_order, memo, schedule_time)
-        VALUES (#{tripId}, #{poiId}, #{tripDay}, #{visitOrder}, #{memo}, #{scheduleTime})
-    </insert>
+	<select id="checkParticipant" resultType="int">
+		SELECT COUNT(*) FROM
+		Trip_Participant WHERE trip_id = #{tripId} AND user_id = #{userId}
+	</select>
 
-    <select id="selectSchedulesByTripId" resultType="com.ssafy.gitaek.dto.TripScheduleDto">
-        SELECT
-        s.trip_id, s.poi_id, s.trip_day, s.visit_order, s.memo, s.schedule_time, p.name as placeName,
-        p.address as placeAddress,
-        p.latitude as placeLat,
-        p.longitude as placeLng
-        FROM Trip_Schedule s
-        JOIN POI p ON s.poi_id = p.poi_id
-        WHERE s.trip_id = #{tripId}
-        ORDER BY s.trip_day ASC, s.visit_order ASC
-    </select>
+	<delete id="deleteParticipant">
+		DELETE FROM Trip_Participant WHERE trip_id = #{tripId} AND user_id =
+		#{userId}
+	</delete>
 
-    <delete id="deleteSchedule">
-        DELETE FROM Trip_Schedule
-        WHERE trip_id = #{tripId}
-        AND trip_day = #{tripDay}
-        AND poi_id = #{poiId}
-    </delete>
+	<delete id="deleteTripParticipants">
+		DELETE FROM Trip_Participant WHERE trip_id = #{tripId}
+	</delete>
 
-    <update id="updateCurrentEditor">
-        UPDATE Trip SET current_editor_id = #{userId} WHERE trip_id = #{tripId}
-    </update>
+	<select id="selectTripByInviteCode"
+		resultType="com.ssafy.gitaek.model.Trip">
+		SELECT * FROM Trip WHERE invite_code = #{inviteCode}
+	</select>
+
 </mapper>

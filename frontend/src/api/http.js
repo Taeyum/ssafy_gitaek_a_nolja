@@ -1,12 +1,25 @@
-import axios from 'axios'
+import axios from "axios";
 
-// Axios 인스턴스 생성
 const http = axios.create({
-  baseURL: '/api', // Vite 프록시를 타도록 설정
+  baseURL: "/api",
   headers: {
-    'Content-Type': 'application/json;charset=utf-8',
+    "Content-Type": "application/json;charset=utf-8",
   },
-  withCredentials: true, // ★ 핵심: 세션 ID(쿠키)를 주고받기 위해 필수!
-})
+  // withCredentials: true,  <-- ★ 제발 지워주세요! JWT랑 충돌납니다.
+});
 
-export default http
+// ★ [필수] 요청 낚아채서 토큰 집어넣기
+http.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export default http;

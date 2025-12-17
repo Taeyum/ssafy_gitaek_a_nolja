@@ -2,302 +2,203 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>기택 아놀자 (Admin Test Ver)</title>
+    <title>시스템 최종 점검 (JWT Diagnostic)</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f4f9; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        body { font-family: 'Consolas', 'Malgun Gothic', sans-serif; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: #252526; padding: 20px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #3e3e42; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { color: #61afef; text-align: center; margin-bottom: 30px; }
+        h2 { margin-top: 0; color: #98c379; border-bottom: 1px solid #3e3e42; padding-bottom: 10px; font-size: 1.2em; }
         
-        /* 일반 카드 스타일 */
-        .card { background: white; width: 320px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); height: fit-content; }
+        .status-box { background: #333; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #555; display: flex; justify-content: space-between; align-items: center; }
+        .token-text { color: #e5c07b; font-size: 0.9em; word-break: break-all; margin-right: 10px; }
         
-        /* 관리자용 넓은 카드 스타일 */
-        .card-wide { background: white; width: 90%; max-width: 1000px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #007bff; }
-
-        h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        input { width: 100%; padding: 10px; margin-top: 5px; background: #3c3c3c; border: 1px solid #555; color: white; box-sizing: border-box; border-radius: 4px; }
+        input:focus { border-color: #61afef; outline: none; }
         
-        button { width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; transition: 0.2s; }
+        button { width: 100%; padding: 12px; margin-top: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
-
-        .btn-blue { background-color: #007bff; }
-        .btn-green { background-color: #28a745; }
-        .btn-red { background-color: #dc3545; }
-        .btn-info { background-color: #17a2b8; }
-        .btn-gray { background-color: #6c757d; }
-        .btn-warning { background-color: #ffc107; color: #333; }
+        .btn-blue { background: #61afef; color: #282c34; }
+        .btn-green { background: #98c379; color: #282c34; }
+        .btn-red { background: #e06c75; color: #282c34; }
         
-        /* 관리자 테이블용 미니 버튼 */
-        .btn-sm { width: auto; padding: 5px 10px; margin: 2px; font-size: 0.8em; }
-
-        .result { margin-top: 10px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; min-height: 20px; word-break: break-all; }
-        
-        /* 테이블 스타일 */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f2f2f2; }
+        .log-area { background: #000; padding: 15px; border-radius: 4px; font-size: 13px; min-height: 80px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #444; color: #ccc; margin-top: 10px; font-family: 'Consolas', monospace; }
+        .success { color: #98c379; }
+        .error { color: #e06c75; }
+        .info { color: #61afef; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h3>👶 1. 회원가입</h3>
-        <input type="text" id="joinEmail" placeholder="이메일">
-        <input type="password" id="joinPw" placeholder="비밀번호">
-        <input type="text" id="joinNick" placeholder="닉네임">
-        <button class="btn-blue" onclick="doSignup()">가입하기 (POST)</button>
-        <div id="joinResult" class="result">대기 중...</div>
-    </div>
+<div class="container">
+    <h1>💉 백엔드/프론트엔드 연동 진단</h1>
 
     <div class="card">
-        <h3>🔑 2. 로그인 (관리자: admin / 1234)</h3>
-        <input type="text" id="loginEmail" placeholder="이메일">
-        <input type="password" id="loginPw" placeholder="비밀번호">
-        <div style="margin-top:5px;">
-            <input type="checkbox" id="rememberId" style="width:auto;"> <label for="rememberId">아이디 기억하기</label>
+        <h2>0. 현재 인증 상태 (localStorage)</h2>
+        <div class="status-box">
+            <span id="tokenStatus" class="token-text">토큰 없음</span>
+            <button class="btn-red" style="width: auto; margin: 0; padding: 5px 10px;" onclick="clearToken()">초기화</button>
         </div>
-        <button class="btn-green" onclick="doLogin()">로그인하기 (POST)</button>
-        <div id="loginResult" class="result">대기 중...</div>
     </div>
 
     <div class="card">
-        <h3>🛡️ 3. 내 정보 (세션 확인)</h3>
-        <button class="btn-info" onclick="getMyInfo()">📑 정보 조회 (GET /me)</button>
-        <button class="btn-red" onclick="doLogout()">🚪 로그아웃 (POST)</button>
-        <div id="sessionResult" class="result">대기 중...</div>
+        <h2>1. 회원가입 (POST /api/users)</h2>
+        <input type="text" id="joinEmail" placeholder="이메일 (예: test@ssafy.com)">
+        <input type="password" id="joinPw" placeholder="비밀번호 (예: 1234)">
+        <input type="text" id="joinNick" placeholder="닉네임 (예: 테스터)">
+        <button class="btn-blue" onclick="doSignup()">🚀 회원가입 요청</button>
+        <div id="joinLog" class="log-area">대기 중...</div>
     </div>
 
     <div class="card">
-        <h3>❓ 4. 비밀번호 찾기</h3>
-        <input type="text" id="findEmail" placeholder="이메일">
-        <input type="text" id="findNick" placeholder="닉네임">
-        <button class="btn-gray" onclick="findPw()">임시 비번 발급</button>
-        <div id="findResult" class="result">대기 중...</div>
+        <h2>2. 로그인 (POST /api/users/login)</h2>
+        <input type="text" id="loginEmail" placeholder="이메일 (admin@ssafy.com)">
+        <input type="password" id="loginPw" placeholder="비밀번호 (1234)">
+        <button class="btn-green" onclick="doLogin()">🔑 로그인 (JWT 토큰 발급)</button>
+        <div id="loginLog" class="log-area">대기 중...</div>
     </div>
 
     <div class="card">
-        <h3>🔒 5. 비밀번호 변경</h3>
-        <input type="password" id="currPw" placeholder="현재 비밀번호">
-        <input type="password" id="newPw" placeholder="새 비밀번호">
-        <button class="btn-info" onclick="changePw()">변경하기 (PUT)</button>
-        <div id="changePwResult" class="result">대기 중...</div>
+        <h2>3. 토큰 검증 (GET /api/users/me)</h2>
+        <p style="font-size: 0.9em; color: #aaa;">* 헤더에 <code>Authorization: Bearer 토큰</code>을 실어 보냅니다.</p>
+        <button class="btn-blue" onclick="getMyInfo()">📑 내 정보 조회 (인증 확인)</button>
+        <div id="meLog" class="log-area">대기 중...</div>
+    </div>
+    
+    
+    
+    
+</div>
+
+
+<div class="card" style="border: 1px solid #e5c07b;">
+        <h2 style="color: #e5c07b;">4. 관리자 전용 (데이터 수집)</h2>
+        <p style="font-size: 0.9em; color: #aaa;">
+            * 주소: <b>GET /api/admin/load-data</b><br>
+            * 조건: 헤더에 토큰 필수 + 관리자(ADMIN) 권한 필요
+        </p>
+        <button class="btn-warning" style="background: #e5c07b; color: #282c34;" onclick="loadData()">📥 관광지 데이터 수집 시작</button>
+        <div id="adminLog" class="log-area">대기 중...</div>
     </div>
 
-    <div class="card-wide">
-        <h3>👮 6. 관리자 페이지 (Admin Only)</h3>
-        <div style="display: flex; gap: 5px;">
-            <select id="searchType" style="width: 30%;">
-                <option value="nickname">닉네임</option>
-                <option value="email">이메일</option>
-            </select>
-            <input type="text" id="searchKeyword" placeholder="검색어 입력" style="width: 50%;">
-            <button class="btn-blue" style="width: 20%; margin-top: 5px;" onclick="loadUserList(1)">🔍 검색</button>
-        </div>
+
+<script>
+    // 1. 시작 시 토큰 상태 확인
+    checkToken();
+
+    function checkToken() {
+        const token = localStorage.getItem("accessToken");
+        const display = document.getElementById("tokenStatus");
+        if(token) {
+            display.innerHTML = `✅ 토큰 보유중 (${token.substring(0, 15)}...)`;
+            display.style.color = "#98c379";
+        } else {
+            display.innerText = "❌ 토큰 없음 (로그인 필요)";
+            display.style.color = "#e06c75";
+        }
+    }
+
+    function clearToken() {
+        localStorage.removeItem("accessToken");
+        checkToken();
+        log("loginLog", "토큰이 삭제되었습니다.");
+        log("meLog", "토큰이 삭제되었습니다.");
+    }
+
+    function log(id, msg, isError = false) {
+        const el = document.getElementById(id);
+        el.innerHTML = isError ? `<span class="error">${msg}</span>` : `<span class="success">${msg}</span>`;
+    }
+
+    // ★ [핵심] API 통신 함수 (fetch)
+    async function callApi(name, url, method, data, logId) {
+        const logBox = document.getElementById(logId);
+        logBox.innerHTML = `<span class="info">⏳ [${name}] 요청 보내는 중...</span>`;
+
+        // 1. 헤더 설정
+        const headers = { "Content-Type": "application/json" };
         
-        <table id="userTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>이메일</th>
-                    <th>닉네임</th>
-                    <th>가입일</th>
-                    <th>권한(Role)</th>
-                    <th>관리 기능</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td colspan="6">조회 버튼을 눌러주세요.</td></tr>
-            </tbody>
-        </table>
-
-        <div id="pagination" style="text-align: center; margin-top: 10px;"></div>
-    </div>
-
-    <script>
-        // 초기 로딩 시 쿠키 체크
-        window.onload = function() {
-            const rememberEmail = getCookie("rememberEmail");
-            if (rememberEmail) {
-                document.getElementById("loginEmail").value = rememberEmail;
-                document.getElementById("rememberId").checked = true;
-            }
+        // 2. 토큰 있으면 자동 추가 (Bearer 방식)
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
         }
 
-        // =======================
-        // 👮 관리자 기능 스크립트
-        // =======================
+        try {
+            const options = {
+                method: method,
+                headers: headers,
+                body: data ? JSON.stringify(data) : null
+            };
+
+            const response = await fetch(url, options);
+            const text = await response.text(); // 응답을 텍스트로 받음
+
+            if (response.ok) {
+                // 성공 (200 OK 등)
+                logBox.innerHTML = `<span class="success">✅ 성공 (${response.status})</span>\n\n응답 데이터:\n${text}`;
+                return text;
+            } else {
+                // 실패 (401, 403, 500 등)
+                logBox.innerHTML = `<span class="error">💥 실패 (${response.status})</span>\n\n서버 메시지:\n${text}`;
+                return null;
+            }
+        } catch (error) {
+            logBox.innerHTML = `<span class="error">❌ 네트워크 오류 (서버 꺼짐?)</span>\n${error}`;
+            return null;
+        }
+    }
+
+    // --- 기능 구현 ---
+
+    async function doSignup() {
+        const data = {
+            email: document.getElementById("joinEmail").value,
+            password: document.getElementById("joinPw").value,
+            nickname: document.getElementById("joinNick").value
+        };
+        await callApi("회원가입", "/api/users", "POST", data, "joinLog");
+    }
+
+    async function doLogin() {
+        const data = {
+            email: document.getElementById("loginEmail").value,
+            password: document.getElementById("loginPw").value
+        };
         
-        // 1. 회원 목록 조회
-        async function loadUserList(page) {
-            const type = document.getElementById('searchType').value;
-            const keyword = document.getElementById('searchKeyword').value;
-            
-            const url = `/api/admin/users?page=${page}&type=${type}&keyword=${keyword}`;
-            
+        // 로그인 요청
+        const result = await callApi("로그인", "/api/users/login", "POST", data, "loginLog");
+        
+        if (result) {
+            // 백엔드가 토큰 문자열(String)을 그대로 줬는지, JSON으로 줬는지 확인
+            let token = result;
             try {
-                const response = await fetch(url);
-                if (response.status === 403) {
-                    alert("관리자 권한이 없습니다! (admin 계정으로 로그인 필요)");
-                    return;
-                }
-                
-                const data = await response.json();
-                renderTable(data.users);
-                renderPagination(data.totalPage, page);
-                
-            } catch (e) {
-                console.error(e);
-                document.querySelector('#userTable tbody').innerHTML = `<tr><td colspan="6" style="color:red;">로드 실패</td></tr>`;
-            }
-        }
-
-        // 테이블 그리기
-        function renderTable(users) {
-            const tbody = document.querySelector('#userTable tbody');
-            tbody.innerHTML = '';
-
-            if(!users || users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6">검색 결과가 없습니다.</td></tr>';
-                return;
+                // 혹시 JSON 객체라면 파싱 ({ "accessToken": "..." })
+                const json = JSON.parse(result);
+                if (json.accessToken) token = json.accessToken;
+            } catch(e) {
+                // 파싱 에러나면 그냥 문자열 자체가 토큰이라고 가정
             }
 
-            users.forEach(u => {
-                let roleColor = u.role === 'ADMIN' ? 'blue' : (u.role === 'BANNED' ? 'red' : 'black');
-                let roleText = u.role || 'USER';
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${u.userId}</td>
-                    <td>${u.email}</td>
-                    <td>${u.nickname}</td>
-                    <td>${u.createdAt ? u.createdAt.substring(0, 10) : '-'}</td>
-                    <td style="color:${roleColor}; font-weight:bold;">${roleText}</td>
-                    <td>
-                        <button class="btn-sm btn-red" onclick="changeRole(${u.userId}, 'BANNED')">정지</button>
-                        <button class="btn-sm btn-green" onclick="changeRole(${u.userId}, 'USER')">해제</button>
-                        <button class="btn-sm btn-blue" onclick="changeRole(${u.userId}, 'ADMIN')">승격</button>
-                        <button class="btn-sm btn-warning" onclick="resetPw(${u.userId})">비번초기화</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // 페이지네이션 그리기
-        function renderPagination(totalPage, currentPage) {
-            const div = document.getElementById('pagination');
-            div.innerHTML = '';
-            for(let i=1; i<=totalPage; i++) {
-                const btn = document.createElement('button');
-                btn.innerText = i;
-                btn.className = 'btn-sm ' + (i === currentPage ? 'btn-blue' : 'btn-gray');
-                btn.onclick = () => loadUserList(i);
-                div.appendChild(btn);
+            if (token && !token.includes("Error") && !token.includes("{")) {
+                localStorage.setItem("accessToken", token);
+                checkToken();
+                document.getElementById("loginLog").innerHTML += `\n\n<span class="success">🎉 토큰 저장 완료! 이제 [3. 내 정보 조회]를 눌러보세요.</span>`;
             }
         }
+    }
 
-        // 2. 권한 변경 (정지/해제/승격)
-        async function changeRole(userId, newRole) {
-            if(!confirm(`정말 ${userId}번 회원의 권한을 [${newRole}]로 변경하시겠습니까?`)) return;
+    async function getMyInfo() {
+        await callApi("내 정보 조회", "/api/users/me", "GET", null, "meLog");
+    }
+    
+    async function loadData() {
+        // 1. 관리자 기능 호출 (토큰은 callApi가 알아서 넣어줌)
+        await callApi("데이터 수집", "/api/admin/load-data", "GET", null, "adminLog");
+    }
+    
+    
+</script>
 
-            const response = await fetch(`/api/admin/users/${userId}/role`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ role: newRole })
-            });
-
-            const msg = await response.text();
-            alert(msg);
-            loadUserList(1); // 리스트 새로고침
-        }
-
-        // 3. 비밀번호 초기화
-        async function resetPw(userId) {
-            if(!confirm(`정말 ${userId}번 회원의 비밀번호를 [1234]로 초기화하시겠습니까?`)) return;
-
-            const response = await fetch(`/api/admin/users/${userId}/reset-pw`, {
-                method: 'PUT'
-            });
-
-            const msg = await response.text();
-            alert(msg);
-        }
-
-
-        // =======================
-        // 🔧 기존 기능 스크립트
-        // =======================
-        
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
-        }
-
-        async function doSignup() {
-            const data = {
-                email: document.getElementById('joinEmail').value,
-                password: document.getElementById('joinPw').value,
-                nickname: document.getElementById('joinNick').value
-            };
-            callApi('/api/users', 'POST', data, 'joinResult');
-        }
-
-        async function doLogin() {
-            const data = {
-                email: document.getElementById('loginEmail').value,
-                password: document.getElementById('loginPw').value,
-                rememberId: document.getElementById('rememberId').checked
-            };
-            await callApi('/api/users/login', 'POST', data, 'loginResult');
-            setTimeout(() => location.reload(), 1500);
-        }
-
-        async function getMyInfo() {
-            callApi('/api/users/me', 'GET', null, 'sessionResult');
-        }
-
-        async function doLogout() {
-            callApi('/api/users/logout', 'POST', null, 'sessionResult');
-        }
-
-        async function findPw() {
-            const data = {
-                email: document.getElementById('findEmail').value,
-                nickname: document.getElementById('findNick').value
-            };
-            callApi('/api/users/password-recovery', 'POST', data, 'findResult');
-        }
-
-        async function changePw() {
-            const data = {
-                currentPassword: document.getElementById('currPw').value,
-                newPassword: document.getElementById('newPw').value
-            };
-            callApi('/api/users/password', 'PUT', data, 'changePwResult');
-        }
-
-        async function callApi(url, method, data, resultId) {
-            const resultDiv = document.getElementById(resultId);
-            const options = { method: method, headers: { 'Content-Type': 'application/json' } };
-            if (data) options.body = JSON.stringify(data);
-
-            try {
-                const response = await fetch(url, options);
-                const text = await response.text();
-                if (response.ok) {
-                    try {
-                        const json = JSON.parse(text);
-                        resultDiv.innerHTML = `<span style="color:green; font-weight:bold;">✅ 성공</span><br><pre>${JSON.stringify(json, null, 2)}</pre>`;
-                    } catch(e) {
-                        resultDiv.innerHTML = `<span style="color:green; font-weight:bold;">✅ ${text}</span>`;
-                    }
-                } else {
-                    resultDiv.innerHTML = `<span style="color:red; font-weight:bold;">💥 실패 (${response.status})</span><br>${text}`;
-                }
-            } catch (error) {
-                console.error(error);
-                resultDiv.innerHTML = '<span style="color:red;">❌ 서버 연결 실패</span>';
-            }
-        }
-    </script>
 </body>
 </html>

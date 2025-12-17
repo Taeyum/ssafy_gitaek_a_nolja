@@ -1,5 +1,5 @@
 -- ==========================================
--- 1. 데이터베이스 초기화 (주의: 기존 데이터 모두 삭제됨)
+-- 1. 데이터베이스 초기화
 -- ==========================================
 DROP DATABASE IF EXISTS ssafy_trip;
 CREATE DATABASE ssafy_trip DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -9,19 +9,20 @@ USE ssafy_trip;
 -- 2. 테이블 생성
 -- ==========================================
 
--- [1] 유저 (Users)
+-- [1] 유저 (Users) - ★ phone_number 추가됨!
 CREATE TABLE Users (
     user_id     INT AUTO_INCREMENT PRIMARY KEY,
     email       VARCHAR(255) NOT NULL UNIQUE,
     password    VARCHAR(255) NOT NULL,
     nickname    VARCHAR(100) NOT NULL,
-    role        VARCHAR(20) DEFAULT 'USER', -- 초기값 USER, 관리자는 ADMIN
+    phone_number VARCHAR(20),  -- ★ 자바 코드와 맞추기 위해 추가
+    role        VARCHAR(20) DEFAULT 'USER',
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- [2] 지역 (Region)
 CREATE TABLE Region (
-    region_id   INT PRIMARY KEY, -- TourAPI 코드와 일치시키기 위해 AUTO_INCREMENT 제거
+    region_id   INT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
     parent_region_id INT
 );
@@ -32,13 +33,13 @@ CREATE TABLE POI (
     name            VARCHAR(255) NOT NULL,
     description     TEXT,
     address         VARCHAR(255),
-    latitude        DECIMAL(10, 8), -- 위도
-    longitude       DECIMAL(11, 8), -- 경도
+    latitude        DECIMAL(10, 8),
+    longitude       DECIMAL(11, 8),
     thumbnail_url   VARCHAR(2048),
     region_id       INT NOT NULL
 );
 
--- [4] 여행 (Trip) - ★ 수정됨 (current_editor_id 추가)
+-- [4] 여행 (Trip)
 CREATE TABLE Trip (
     trip_id           INT AUTO_INCREMENT PRIMARY KEY,
     title             VARCHAR(255) NOT NULL,
@@ -49,7 +50,7 @@ CREATE TABLE Trip (
     owner_id          INT NOT NULL,
     max_participants  INT DEFAULT 4,
     region_id         INT NOT NULL,
-    current_editor_id INT DEFAULT NULL, -- ★ [추가] 현재 수정 중인 유저 ID (동시성 제어용)
+    current_editor_id INT DEFAULT NULL, 
     invite_code       VARCHAR(50) DEFAULT NULL,
     created_at        DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -95,60 +96,39 @@ CREATE TABLE Chat_Message (
 -- 3. 외래키(Foreign Key) 설정
 -- ==========================================
 
--- POI -> Region
 ALTER TABLE POI ADD CONSTRAINT FK_POI_Region FOREIGN KEY (region_id) REFERENCES Region(region_id);
 
--- Trip -> User (Owner), Region
 ALTER TABLE Trip ADD CONSTRAINT FK_Trip_Owner FOREIGN KEY (owner_id) REFERENCES Users(user_id);
 ALTER TABLE Trip ADD CONSTRAINT FK_Trip_Region FOREIGN KEY (region_id) REFERENCES Region(region_id);
--- (선택 사항: current_editor_id도 외래키로 걸어두면 유저 삭제 시 안전합니다)
 ALTER TABLE Trip ADD CONSTRAINT FK_Trip_Editor FOREIGN KEY (current_editor_id) REFERENCES Users(user_id) ON DELETE SET NULL;
 
--- Trip_Participant -> Trip, User (ON DELETE CASCADE 추가: 여행 삭제 시 참가자도 자동 삭제)
 ALTER TABLE Trip_Participant ADD CONSTRAINT FK_TP_Trip FOREIGN KEY (trip_id) REFERENCES Trip(trip_id) ON DELETE CASCADE;
 ALTER TABLE Trip_Participant ADD CONSTRAINT FK_TP_User FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE;
 
--- Trip_Schedule -> Trip, POI (ON DELETE CASCADE 추가: 여행 삭제 시 일정도 자동 삭제)
 ALTER TABLE Trip_Schedule ADD CONSTRAINT FK_TS_Trip FOREIGN KEY (trip_id) REFERENCES Trip(trip_id) ON DELETE CASCADE;
 ALTER TABLE Trip_Schedule ADD CONSTRAINT FK_TS_POI FOREIGN KEY (poi_id) REFERENCES POI(poi_id);
 
--- Chat_Room -> Trip (ON DELETE CASCADE 추가)
 ALTER TABLE Chat_Room ADD CONSTRAINT FK_CR_Trip FOREIGN KEY (trip_id) REFERENCES Trip(trip_id) ON DELETE CASCADE;
 
--- Chat_Message -> Chat_Room, User
 ALTER TABLE Chat_Message ADD CONSTRAINT FK_CM_Room FOREIGN KEY (chat_room_id) REFERENCES Chat_Room(chat_room_id) ON DELETE CASCADE;
 ALTER TABLE Chat_Message ADD CONSTRAINT FK_CM_User FOREIGN KEY (user_id) REFERENCES Users(user_id);
 
 
 -- ==========================================
--- 4. 초기 필수 데이터 (Region) 삽입
+-- 4. 초기 데이터 삽입
 -- ==========================================
--- TourAPI 지역 코드와 매칭 (서울=1, 인천=2 ... 제주=39)
 INSERT INTO Region (region_id, name) VALUES
-(1, '서울'),
-(2, '인천'),
-(3, '대전'),
-(4, '대구'),
-(5, '광주'),
-(6, '부산'),
-(7, '울산'),
-(8, '세종'),
-(31, '경기'),
-(32, '강원'),
-(33, '충북'),
-(34, '충남'),
-(35, '경북'),
-(36, '경남'),
-(37, '전북'),
-(38, '전남'),
-(39, '제주'),
-(0, '전국'); -- 전국 검색용 0번 추가 (선택사항)
+(1, '서울'), (2, '인천'), (3, '대전'), (4, '대구'), (5, '광주'), (6, '부산'), (7, '울산'), (8, '세종'),
+(31, '경기'), (32, '강원'), (33, '충북'), (34, '충남'), (35, '경북'), (36, '경남'), (37, '전북'), (38, '전남'), (39, '제주'),
+(0, '전국');
 
--- 테스트용 관리자 계정 (비번: 1234)
-INSERT INTO Users (email, password, nickname, role) VALUES 
-('admin@ssafy.com', '1234', '관리자', 'ADMIN'),
-('ssafy@ssafy.com', '1234', '김싸피', 'USER');
+-- 기본 관리자 및 테스트 계정 생성
+-- (비밀번호는 암호화되지 않은 예시입니다. 실제 로그인 시에는 암호화된 값이 필요할 수 있습니다)
+--INSERT INTO Users (email, password, nickname, phone_number, role) VALUES 
+--('admin@ssafy.com', '$2a$10$YourEncryptedPasswordHere', '관리자', '010-0000-0000', 'ADMIN'), 
+--('ssafy@ssafy.com', '$2a$10$YourEncryptedPasswordHere', '김싸피', '010-1234-5678', 'USER');
 
--- 확인
-SELECT * FROM Region;
-SELECT * FROM Users;
+-- ★ [추가 요청] 테스트 계정을 강제로 ADMIN으로 승격시키기
+-- (만약 위 INSERT 문에 admin@test.com이 없다면 0 rows affected가 뜨겠지만, 
+--  나중에 회원가입 후 이 줄만 따로 실행하면 관리자가 됩니다.)
+--UPDATE Users SET role = 'ADMIN' WHERE email = 'admin@test.com';
