@@ -27,4 +27,17 @@
         SET description = #{description}
         WHERE poi_id = #{poiId}
     </update>
+
+    <select id="searchPoiByTitle" resultType="com.ssafy.gitaek.dto.PoiDto">
+        SELECT * FROM POI
+        WHERE name LIKE CONCAT('%', #{keyword}, '%')
+        LIMIT 1
+    </select>
+
+    <select id="findNamesByKeyword" resultType="string">
+        SELECT name
+        FROM POI
+        WHERE address LIKE CONCAT('%', #{keyword}, '%')
+        LIMIT 80
+    </select>
 </mapper>

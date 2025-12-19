@@ -1,9 +1,11 @@
 package com.ssafy.gitaek.controller;
 
+import com.ssafy.gitaek.dto.AiPlanRequest;
 import com.ssafy.gitaek.dto.PoiDto;
 import com.ssafy.gitaek.mapper.PoiMapper;
 import com.ssafy.gitaek.service.AiService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,5 +59,22 @@ public class AttractionController {
         }
 
         return ResponseEntity.ok(aiDesc);
+    }
+
+    // ★ AI 코스 생성 요청 (POST /api/attractions/ai-plan)
+    @PostMapping("/ai-plan")
+    public ResponseEntity<?> getAiPlan(@RequestBody AiPlanRequest request) {
+        String jsonResult = aiService.getAiItinerary(
+                request.getDestination(),
+                request.getTotalDays(),
+                request.getStyle()
+        );
+
+        if (jsonResult == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("AI 코스 생성 실패");
+        }
+
+        // JSON String을 그대로 반환 (프론트에서 JSON.parse 할 것임)
+        return ResponseEntity.ok(jsonResult);
     }
 }
