@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder; // ★ 추�
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ssafy.gitaek.mapper.TripMapper;
 import com.ssafy.gitaek.mapper.UserMapper;
 import com.ssafy.gitaek.model.User;
 
@@ -17,6 +18,10 @@ public class UserService {
 
     @Autowired
     private UserMapper userMapper;
+    
+    @Autowired
+    private TripMapper tripMapper; // ★ TripMapper 주입 (여행 삭제용)
+
 
     @Autowired
     private PasswordEncoder passwordEncoder; // ★ 암호화 도구 주입
@@ -109,4 +114,25 @@ public class UserService {
         user.setPassword(passwordEncoder.encode("1234")); // ★ 초기화 비번도 암호화
         userMapper.updatePassword(user);
     }
+    
+    // 회원 탈퇴
+    @Transactional
+    public boolean deleteUser(int userId, String password) {
+        User user = userMapper.selectUserById(userId);
+
+        // 1. 유저가 없거나 비밀번호가 틀리면 실패
+        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
+            return false;
+        }
+        
+        // 2. ★ [핵심 추가] 이 사람이 '방장'인 여행들 먼저 삭제!
+        // (이걸 안 하면 FK 제약조건 때문에 에러남)
+        tripMapper.deleteTripsByOwnerId(userId);
+
+
+        // 2. 삭제 진행
+        userMapper.deleteUser(userId);
+        return true;
+    }
+    
 }

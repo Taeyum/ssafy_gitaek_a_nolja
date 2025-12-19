@@ -110,5 +110,9 @@
 		resultType="com.ssafy.gitaek.model.Trip">
 		SELECT * FROM Trip WHERE invite_code = #{inviteCode}
 	</select>
+	
+	<delete id="deleteTripsByOwnerId">
+        DELETE FROM Trip WHERE owner_id = #{ownerId}
+    </delete>
 
 </mapper>

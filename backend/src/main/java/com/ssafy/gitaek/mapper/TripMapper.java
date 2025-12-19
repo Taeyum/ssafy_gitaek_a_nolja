@@ -37,4 +37,10 @@ public interface TripMapper {
 
     // [추가] 멤버 나가기
     void deleteParticipant(@Param("tripId") int tripId, @Param("userId") int userId);
+    
+    
+    // [추가] 특정 유저가 방장인 모든 여행 삭제
+    void deleteTripsByOwnerId(int ownerId);
+    
+    
 }

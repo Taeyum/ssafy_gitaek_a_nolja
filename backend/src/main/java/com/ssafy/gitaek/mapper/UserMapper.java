@@ -30,4 +30,6 @@ public interface UserMapper {
     List<User> selectUserList(Map<String, Object> params);
     
     int updateUserRole(@Param("userId") int userId, @Param("role") String role);
+    
+    int deleteUser(int userId);
 }

@@ -1,10 +1,7 @@
 package com.ssafy.gitaek.controller;
 
-import com.ssafy.gitaek.dto.*;
-import com.ssafy.gitaek.jwt.CustomUserDetails;
-import com.ssafy.gitaek.jwt.JwtTokenProvider;
-import com.ssafy.gitaek.model.User;
-import com.ssafy.gitaek.service.UserService;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +9,24 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.ssafy.gitaek.dto.UserChangePwRequest;
+import com.ssafy.gitaek.dto.UserFindPwRequest;
+import com.ssafy.gitaek.dto.UserLoginRequest;
+import com.ssafy.gitaek.dto.UserSignupRequest;
+import com.ssafy.gitaek.jwt.CustomUserDetails;
+import com.ssafy.gitaek.jwt.JwtTokenProvider;
+import com.ssafy.gitaek.model.User;
+import com.ssafy.gitaek.service.UserService;
 
 @RestController
 @RequestMapping("/api/users")
@@ -108,4 +122,32 @@ public class UserController {
             return new ResponseEntity<>("현재 비밀번호가 틀렸습니다.", HttpStatus.BAD_REQUEST);
         }
     }
+    
+ // ★ 회원 탈퇴
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable int userId,
+                                        @RequestBody Map<String, String> body,
+                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+        // 1. 로그인 정보 확인
+        if (userDetails == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+
+        // 2. 본인 확인 (토큰의 ID와 요청한 ID가 같은지)
+        if (userDetails.getUser().getUserId() != userId) {
+            return new ResponseEntity<>("본인의 계정만 탈퇴할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 3. 비밀번호 꺼내기 (프론트에서 { data: { password: "..." } } 로 보냄)
+        String password = body.get("password");
+
+        // 4. 서비스 호출
+        boolean isDeleted = userService.deleteUser(userId, password);
+
+        if (isDeleted) {
+            return new ResponseEntity<>("회원 탈퇴가 완료되었습니다.", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("비밀번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST);
+        }
+    }
+    
+    
 }

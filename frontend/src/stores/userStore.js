@@ -103,6 +103,11 @@ export const useUserStore = defineStore("user", () => {
         currentPassword,
         newPassword,
       });
+
+      // 12/18 추가한 사항
+      // ★ 핵심: DB 변경 성공했으니, 가지고 있는 토큰(열쇠) 폐기!
+      await logout();
+
       return true;
     } catch (e) {
       alert(e.response?.data);
@@ -113,9 +118,18 @@ export const useUserStore = defineStore("user", () => {
   const deleteAccount = async (password) => {
     try {
       await deleteUserApi(userInfo.value.id, password);
-      await logout();
+      // 1218
+      // 2. ★ [수정] logout()을 호출하지 마세요! (서버로 요청 보내서 에러남)
+      // await logout(); <--- 이거 지우거나 주석 처리
+      // 3. 대신 여기서 '수동으로' 클라이언트 청소만 합니다.
+      userInfo.value = null;
+      localStorage.removeItem("accessToken");
+      // 위에 await 주석처리하고, 이거 만듦.
       return true;
     } catch (e) {
+      // console.log(e); // F12 콘솔에서 확인 가능
+      // // 백엔드 에러 메시지가 있으면 보여주고, 없으면 기본 메시지
+      //   const msg = e.response?.data || "탈퇴 처리 중 오류가 발생했습니다.";
       alert(e.response?.data);
       return false;
     }

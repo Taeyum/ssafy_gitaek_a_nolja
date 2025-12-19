@@ -50,10 +50,10 @@ public class SecurityConfig {
 						// 1. 누구나 들어갈 수 있는 곳 (로그인, 회원가입, 관광지 조회)
 						.requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/users", "/api/users/login").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/attractions/**", "/api/trips/**").permitAll() // 여행 조회도
-																												// 일단 허용
-																												// (필요시
-																												// 수정)
+						.requestMatchers(HttpMethod.GET, "/api/attractions/**", "/api/trips/**").permitAll() 
+						// http://localhost:8080/api/admin/load-data  허용																					
+						.requestMatchers("/api/admin/load-data").permitAll()																						// (필요시
+																											
 						.requestMatchers("/api/users/check-email", "/api/users/password-recovery").permitAll()
 						// 2. 관리자만 가능한 곳
 						.requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")

@@ -67,5 +67,9 @@
 	<update id="updateUserRole">
 		UPDATE Users SET role = #{role} WHERE user_id = #{userId}
 	</update>
+	
+	<delete id="deleteUser">
+        DELETE FROM Users WHERE user_id = #{userId}
+    </delete>
 
 </mapper>

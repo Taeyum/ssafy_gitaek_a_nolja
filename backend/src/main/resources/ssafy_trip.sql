@@ -124,11 +124,11 @@ INSERT INTO Region (region_id, name) VALUES
 
 -- 기본 관리자 및 테스트 계정 생성
 -- (비밀번호는 암호화되지 않은 예시입니다. 실제 로그인 시에는 암호화된 값이 필요할 수 있습니다)
---INSERT INTO Users (email, password, nickname, phone_number, role) VALUES 
---('admin@ssafy.com', '$2a$10$YourEncryptedPasswordHere', '관리자', '010-0000-0000', 'ADMIN'), 
---('ssafy@ssafy.com', '$2a$10$YourEncryptedPasswordHere', '김싸피', '010-1234-5678', 'USER');
+-- INSERT INTO Users (email, password, nickname, phone_number, role) VALUES
+-- ('admin@ssafy.com', '$2a$10$YourEncryptedPasswordHere', '관리자', '010-0000-0000', 'ADMIN'),
+-- ('ssafy@ssafy.com', '$2a$10$YourEncryptedPasswordHere', '김싸피', '010-1234-5678', 'USER');
 
 -- ★ [추가 요청] 테스트 계정을 강제로 ADMIN으로 승격시키기
 -- (만약 위 INSERT 문에 admin@test.com이 없다면 0 rows affected가 뜨겠지만, 
 --  나중에 회원가입 후 이 줄만 따로 실행하면 관리자가 됩니다.)
---UPDATE Users SET role = 'ADMIN' WHERE email = 'admin@test.com';
+-- UPDATE Users SET role = 'ADMIN' WHERE email = 'admin@test.com';
