@@ -32,4 +32,6 @@ public interface UserMapper {
     int updateUserRole(@Param("userId") int userId, @Param("role") String role);
     
     int deleteUser(int userId);
+
+	int checkNicknameExists(String nickname);
 }

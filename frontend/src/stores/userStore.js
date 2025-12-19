@@ -81,9 +81,26 @@ export const useUserStore = defineStore("user", () => {
 
   const checkNickname = async (nickname) => {
     try {
-      return (await checkNicknameApi(nickname)).data;
-    } catch {
-      return true;
+      const response = await checkNicknameApi(nickname);
+      
+      // ★ [디버깅] 백엔드가 도대체 뭘 주는지 눈으로 확인!
+      console.log("닉네임 중복 체크 응답값:", response.data);
+      console.log("응답 타입:", typeof response.data);
+
+      // 만약 백엔드가 "true"(사용가능)를 리턴한다면, 여기서 !response.data로 뒤집어야 할 수도 있음
+      return response.data; 
+
+    } catch (error) {
+      // ★ [디버깅] 에러가 나서 여기로 왔는지 확인!
+      console.error("중복 체크 중 에러 발생:", error);
+      
+      // 만약 404 에러라면? (백엔드가 "없음"을 404로 주는 경우)
+      if (error.response && error.response.status === 404) {
+         console.log("404 에러임 -> 닉네임이 없다는 뜻이므로 '사용 가능'으로 처리");
+         return false; // 사용 가능(중복 아님)으로 리턴
+      }
+
+      return true; // 그 외 진짜 에러는 중복으로 처리하여 가입 막기
     }
   };
 

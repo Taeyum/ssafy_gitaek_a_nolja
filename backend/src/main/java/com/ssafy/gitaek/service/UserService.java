@@ -134,5 +134,20 @@ public class UserService {
         userMapper.deleteUser(userId);
         return true;
     }
-    
+    // 1. 닉네임 중복 체크
+    public boolean checkNickname(String nickname) {
+        // 이메일&닉네임으로 조회하는 기존 로직 활용하거나, 카운트 쿼리 사용
+        // 여기서는 간단하게 selectUserByEmailAndNick 등을 응용하거나 새로 만듭니다.
+        // Mapper에 'checkNicknameExists'가 있다면 그걸 쓰고, 없다면 아래처럼:
+        return userMapper.checkNicknameExists(nickname) > 0;
+    }
+
+    // 2. 닉네임 변경
+    public void updateNickname(int userId, String newNickname) {
+        User user = new User();
+        user.setUserId(userId);
+        user.setNickname(newNickname);
+        // UserMapper.xml에 updateUser가 nickname을 업데이트하도록 되어 있어야 함
+        userMapper.updateUser(user);
+    }
 }

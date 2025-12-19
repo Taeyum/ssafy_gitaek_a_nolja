@@ -148,6 +148,43 @@ public class UserController {
             return new ResponseEntity<>("비밀번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST);
         }
     }
-    
+
+    // ★ [추가 1] 닉네임 중복 체크
+    // 요청: GET /api/users/check/{nickname}
+    @GetMapping("/check/{nickname}")
+    public ResponseEntity<?> checkNickname(@PathVariable("nickname") String nickname) {
+        // 서비스에서 중복 여부 확인 (true: 중복, false: 사용가능)
+        boolean isDuplicate = userService.checkNickname(nickname);
+        return ResponseEntity.ok(isDuplicate);
+    }
+
+    // ★ [추가 2] 회원 정보 수정 (닉네임 변경)
+    // 요청: PUT /api/users/{userId}
+    @PutMapping("/{userId}")
+    public ResponseEntity<?> updateUserInfo(@PathVariable int userId,
+                                            @RequestBody Map<String, String> body,
+                                            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        // 1. 로그인 확인
+        if (userDetails == null) {
+            return new ResponseEntity<>("로그인이 필요합니다.", HttpStatus.UNAUTHORIZED);
+        }
+
+        // 2. 본인 확인 (토큰 주인 == 수정하려는 대상)
+        if (userDetails.getUser().getUserId() != userId) {
+            return new ResponseEntity<>("본인의 정보만 수정할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 3. 닉네임 꺼내기
+        String newNickname = body.get("nickname");
+
+        // 4. 업데이트 수행
+        try {
+            userService.updateNickname(userId, newNickname);
+            return ResponseEntity.ok("회원 정보가 수정되었습니다.");
+        } catch (Exception e) {
+            return new ResponseEntity<>("수정 실패", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
     
 }

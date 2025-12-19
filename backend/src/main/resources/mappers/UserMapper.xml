@@ -72,4 +72,7 @@
         DELETE FROM Users WHERE user_id = #{userId}
     </delete>
 
+	<select id="checkNicknameExists" resultType="int">
+		SELECT COUNT(*) FROM Users WHERE nickname = #{nickname}
+	</select>
 </mapper>
