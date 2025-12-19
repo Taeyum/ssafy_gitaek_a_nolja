@@ -97,7 +97,7 @@ Postman 및 Talend API Tester를 활용하여 주요 시나리오 테스트를 �
 
 ## 👤 저자 및 기여자
 
-* **은태현** - *Frontend & Trip Backend & AI*
+* **은태현** - *Project Leader & Frontend & Trip Backend & AI*
 * **박기택** - *User Backend & Document*
 
 ---
