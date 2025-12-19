@@ -16,7 +16,7 @@
 - tour.api.key="여기에 키 입력" (인코딩 키)
 - KorService2
 - tour.api.baseUrl=https://apis.data.go.kr/B551011/KorService2
-- 이후 데이터 수집 실행 메서드  http://localhost:8080/admin/users/load-data 실행
+- 이후 데이터 수집 실행 메서드  http://localhost:8080/api/admin/load-data 실행
 #
 
 ## ERD
