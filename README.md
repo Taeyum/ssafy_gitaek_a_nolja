@@ -16,7 +16,7 @@
 * **Framework**: Spring Boot 3.3.5
 * **Build Tool**: Maven
 * **Database**: MySQL 8.0
-* **Libraries**: Spring Security, JWT, Lombok, MyBatis (or JPA)
+* **Libraries**: Spring Security, JWT, Lombok, MyBatis
 
 ### 프론트엔드 (Frontend - Separate Repository)
 
