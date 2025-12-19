@@ -1,10 +1,10 @@
 
-# ✈️ Trip Backend (Gitaek Anolja)
+# ✈️ Gitaek Anolja
 
-> **친구들과 함께 실시간으로 떠나는 여행 계획 협업 플랫폼**
+> **기택이와 함께 실시간으로 떠나는 여행 계획 협업 플랫폼**
 > "지도 위에서 친구들과 동시에 여행 코스를 그려보세요."
 
-**Trip Backend**는 Vue.js 프론트엔드와 연동되어 작동하는 Spring Boot 기반의 백엔드 프로젝트입니다. 공공데이터포털의 관광지 API(TourAPI)와 Kakao Map API를 활용하여 직관적인 경로 설계를 지원하며, **JWT 기반의 보안**, **RESTful API 설계**, 그리고 **데이터 동시성 제어**를 통해 안정적인 협업 경험을 제공합니다.
+**Gitaek Anolja**는 Vue.js 프론트엔드와 연동되어 작동하는 Spring Boot 기반의 백엔드 프로젝트입니다. 공공데이터포털의 관광지 API(TourAPI)와 Kakao Map API를 활용하여 직관적인 경로 설계를 지원하며, **JWT 기반의 보안**, **RESTful API 설계**, 그리고 **데이터 동시성 제어**를 통해 안정적인 협업 경험을 제공합니다.
 
 ---
 
