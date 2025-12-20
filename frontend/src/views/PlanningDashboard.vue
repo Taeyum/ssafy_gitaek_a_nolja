@@ -103,12 +103,24 @@
   
       console.log("🤖 AI 원본 응답:", aiPlans);
   
+      // ★ [수정] 지역 필터링 ("제주"를 선택했으면 주소에 "제주"가 있어야 함)
+      const targetRegion = aiForm.value.destination.substring(0, 2); 
+      
+      // 필터링 적용 (해당 지역이 주소에 없으면 제외)
+      const filteredAiPlans = aiPlans.filter(plan => {
+        if (!plan.address || !plan.address.includes(targetRegion)) {
+          console.warn(`🚨 지역 불일치로 제외됨: ${plan.title} (${plan.address})`);
+          return false;
+        }
+        return true;
+      });
+  
       const maxDay = aiForm.value.totalDays;
       let addedCount = 0;
       const timeSlots = ["10:00", "11:30", "13:30", "15:30", "17:30", "19:30", "21:00"];
       const dayIndexTracker = {}; 
   
-      for (const plan of aiPlans) {
+      for (const plan of filteredAiPlans) {
         if (plan.day > 0 && plan.day <= maxDay) {
           const targetDay = tripStore.itinerary.find(d => parseInt(d.day) === plan.day);
   
@@ -140,7 +152,7 @@
       }
   
       if (addedCount === 0) {
-        alert("AI가 추천한 장소가 DB에 없거나 날짜 매칭에 실패했습니다.");
+        alert(`AI 추천 결과가 없거나, '${aiForm.value.destination}' 지역의 장소가 아닙니다.`);
       } else {
         alert(`성공! ${addedCount}개의 장소를 일정에 추가했습니다.`);
         showAiModal.value = false;
@@ -189,14 +201,11 @@
     }
   );
   
-  // ★ [수정됨] 일정이 변경될 때마다 지도에 동선 그리기 (Polyline)
-  // 이전처럼 데이터를 평탄화(Flat)하지 않고, 있는 그대로 보냅니다.
+  // 일정이 변경될 때마다 지도에 동선 그리기 (Polyline)
   watch(
     () => tripStore.itinerary, 
     (newItinerary) => {
       if (!mapAreaRef.value) return;
-  
-      // MapArea가 날짜별(index별)로 색을 칠할 수 있도록 전체 구조를 전달
       mapAreaRef.value.drawRoute(newItinerary);
     },
     { deep: true }
@@ -241,6 +250,13 @@
     }
   };
   
+  // ★ [신규] 일정 리스트 클릭 시 지도 이동
+  const handleFocusPlace = ({ lat, lng }) => {
+    if (mapAreaRef.value) {
+      mapAreaRef.value.moveCamera(lat, lng);
+    }
+  };
+  
   const openAddModalFromSearch = (place) => {
     if (!isEditing.value) {
       alert("편집 권한이 없습니다.\n상단의 [수정 권한 요청]을 먼저 눌러주세요!");
@@ -255,6 +271,11 @@
     modalLng.value = place.longitude || 0;
     modalPoiId.value = place.poiId;
     showModal.value = true;
+    
+    // 모달 열 때 해당 위치로 지도 이동
+    if (mapAreaRef.value) {
+      mapAreaRef.value.moveCamera(modalLat.value, modalLng.value);
+    }
   };
   
   const openManualAddModal = () => {
@@ -579,6 +600,7 @@
               :isEditing="isEditing"
               @edit-item="openEditModal"
               @open-manual-add="openManualAddModal"
+              @focus-place="handleFocusPlace"
               class="absolute inset-0"
             />
             <ChatInterface v-else class="absolute inset-0" />

@@ -5,11 +5,16 @@ import com.ssafy.gitaek.dto.PoiDto;
 import com.ssafy.gitaek.mapper.PoiMapper;
 import com.ssafy.gitaek.service.AiService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/attractions")
@@ -20,6 +25,13 @@ public class AttractionController {
 
     @Autowired
     private AiService aiService;
+
+    @Value("${kakao.api.key}")
+    private String kakaoApiKey;
+
+    @Value("${kakao.mobility.url}")
+    private String kakaoMobilityUrl;
+
 
     // 전체 조회 또는 지역별 조회
     // 요청 예시: /api/attractions?areaCode=1 (서울만 조회)
@@ -88,5 +100,30 @@ public class AttractionController {
 
         // JSON String을 그대로 반환 (프론트에서 JSON.parse 할 것임)
         return ResponseEntity.ok(jsonResult);
+    }
+
+    /**
+     * 카카오 모빌리티 길찾기 API 중계
+     */
+    @GetMapping("/path")
+    public ResponseEntity<?> getPath(@RequestParam String start, @RequestParam String end) {
+
+        // 1. 프로퍼티에서 가져온 URL 사용
+        // (가독성을 위해 String.format 사용 추천)
+        String url = String.format("%s?origin=%s&destination=%s&priority=RECOMMEND",
+                kakaoMobilityUrl, start, end);
+
+        // 2. 프로퍼티에서 가져온 API 키 사용
+        HttpHeaders headers = new HttpHeaders();
+        // ★ "KakaoAK " (공백 포함) 뒤에 변수를 붙임
+        headers.set("Authorization", "KakaoAK " + kakaoApiKey);
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        // 3. 요청 전송
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+        return ResponseEntity.ok(response.getBody());
     }
 }
