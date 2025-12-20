@@ -61,6 +61,18 @@ public class AttractionController {
         return ResponseEntity.ok(aiDesc);
     }
 
+    @GetMapping("/bounds")
+    public ResponseEntity<?> getAttractionsByBounds(
+            @RequestParam double minLat,
+            @RequestParam double maxLat,
+            @RequestParam double minLng,
+            @RequestParam double maxLng,
+            @RequestParam(defaultValue = "12") int contentTypeId // 기본값: 관광지(12)
+    ) {
+        List<PoiDto> list = poiMapper.getAttractionsByBounds(minLat, maxLat, minLng, maxLng, contentTypeId);
+        return ResponseEntity.ok(list);
+    }
+
     // ★ AI 코스 생성 요청 (POST /api/attractions/ai-plan)
     @PostMapping("/ai-plan")
     public ResponseEntity<?> getAiPlan(@RequestBody AiPlanRequest request) {

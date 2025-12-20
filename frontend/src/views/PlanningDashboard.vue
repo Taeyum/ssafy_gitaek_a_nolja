@@ -66,7 +66,6 @@
   });
   const isAiLoading = ref(false);
   
-  // 날짜 차이 계산 함수
   const calculateDuration = (start, end) => {
     if (!start || !end) return 1;
     const s = new Date(start);
@@ -76,101 +75,83 @@
     return diffDays;
   };
   
-  // 1. AI 모달 열기
   const openAiModal = () => {
     if (!isEditing.value) {
       alert("편집 권한이 없습니다.\n먼저 [수정 권한 요청]을 해주세요!");
       return;
     }
-  
     const trip = tripStore.tripInfo;
     if (!trip) return alert("여행 정보가 없습니다.");
   
     const totalDays = calculateDuration(trip.startDate, trip.endDate);
-  
     aiForm.value = {
-      destination: "", // ★ 빈 값으로 초기화해야 datalist가 바로 뜹니다!
+      destination: "",
       totalDays: totalDays,
       style: "",
     };
     showAiModal.value = true;
   };
- // 2. AI 요청 보내기 (시간 충돌 해결 버전)
-const fetchAiPlan = async () => {
-  if (!aiForm.value.destination) return alert("여행지를 입력해주세요");
-  if (!aiForm.value.style) return alert("여행 스타일을 입력해주세요");
-
-  isAiLoading.value = true;
-  try {
-    const res = await http.post("/attractions/ai-plan", aiForm.value);
-    
-    // 데이터 파싱
-    const aiPlans = (typeof res.data === 'string') 
-      ? JSON.parse(res.data) 
-      : res.data;
-
-    console.log("🤖 AI 원본 응답:", aiPlans);
-
-    const maxDay = aiForm.value.totalDays;
-    let addedCount = 0;
-
-    // ★ [핵심] 날짜별로 현재 시간을 관리하는 객체
-    // 예: { "1": 10, "2": 10, "3": 10 } -> 1일차 10시부터 시작
-    const timeTracker = {}; 
-
-    // for...of 문을 사용하여 순차적으로 처리 (Deadlock 방지)
-    for (const plan of aiPlans) {
-      if (plan.day > 0 && plan.day <= maxDay) {
-        
-        // 날짜 매칭
-        const targetDay = tripStore.itinerary.find(d => parseInt(d.day) === plan.day);
-
-        if (targetDay) {
-          // 해당 날짜의 시간 설정 (없으면 10시부터 시작)
-          if (!timeTracker[plan.day]) {
-            timeTracker[plan.day] = 10; 
-          }
-
-          // 시간을 "HH:00" 문자열로 변환
-          const currentTimeStr = `${timeTracker[plan.day]}:00`;
-
-          // DB에 존재하는 장소만 추가
-          if (plan.poiId && plan.poiId > 0) {
-            await tripStore.addPlace(
-              targetDay.id, 
-              {
-                name: plan.title,                
-                address: plan.address, 
-                poiId: plan.poiId,          
-                lat: plan.lat,
-                lng: plan.lng,
-                memo: plan.memo                  
-              },
-              currentTimeStr // ★ 고정값 대신 계산된 시간 사용!
-            );
-            addedCount++;
-            
-            // ★ 다음 장소를 위해 2시간 증가
-            timeTracker[plan.day] += 2; 
+  
+  const fetchAiPlan = async () => {
+    if (!aiForm.value.destination) return alert("여행지를 입력해주세요");
+    if (!aiForm.value.style) return alert("여행 스타일을 입력해주세요");
+  
+    isAiLoading.value = true;
+    try {
+      const res = await http.post("/attractions/ai-plan", aiForm.value);
+      const aiPlans = (typeof res.data === 'string') ? JSON.parse(res.data) : res.data;
+  
+      console.log("🤖 AI 원본 응답:", aiPlans);
+  
+      const maxDay = aiForm.value.totalDays;
+      let addedCount = 0;
+      const timeSlots = ["10:00", "11:30", "13:30", "15:30", "17:30", "19:30", "21:00"];
+      const dayIndexTracker = {}; 
+  
+      for (const plan of aiPlans) {
+        if (plan.day > 0 && plan.day <= maxDay) {
+          const targetDay = tripStore.itinerary.find(d => parseInt(d.day) === plan.day);
+  
+          if (targetDay) {
+            if (dayIndexTracker[plan.day] === undefined) dayIndexTracker[plan.day] = 0; 
+            let assignedTime;
+            const index = dayIndexTracker[plan.day];
+            if (index < timeSlots.length) assignedTime = timeSlots[index];
+            else assignedTime = `${21 + (index - timeSlots.length + 1)}:00`;
+  
+            if (plan.poiId && plan.poiId > 0) {
+              await tripStore.addPlace(
+                targetDay.id, 
+                {
+                  name: plan.title,                
+                  address: plan.address, 
+                  poiId: plan.poiId,          
+                  lat: plan.lat,
+                  lng: plan.lng,
+                  memo: plan.memo                  
+                },
+                assignedTime
+              );
+              addedCount++;
+              dayIndexTracker[plan.day]++; 
+            }
           }
         }
       }
+  
+      if (addedCount === 0) {
+        alert("AI가 추천한 장소가 DB에 없거나 날짜 매칭에 실패했습니다.");
+      } else {
+        alert(`성공! ${addedCount}개의 장소를 일정에 추가했습니다.`);
+        showAiModal.value = false;
+      }
+    } catch (e) {
+      console.error("AI 에러 상세:", e);
+      alert("일정 저장 중 오류가 발생했습니다.");
+    } finally {
+      isAiLoading.value = false;
     }
-
-    if (addedCount === 0) {
-      alert("AI가 추천한 장소가 DB에 없거나 날짜 매칭에 실패했습니다.");
-    } else {
-      alert(`성공! ${addedCount}개의 장소를 일정에 추가했습니다.`);
-      showAiModal.value = false;
-    }
-
-  } catch (e) {
-    console.error("AI 에러 상세:", e);
-    alert("일정 저장 중 오류가 발생했습니다.");
-  } finally {
-    isAiLoading.value = false;
-  }
-};
+  };
   
   /* =========================================
      기본 로직
@@ -208,13 +189,24 @@ const fetchAiPlan = async () => {
     }
   );
   
+  // ★ [수정됨] 일정이 변경될 때마다 지도에 동선 그리기 (Polyline)
+  // 이전처럼 데이터를 평탄화(Flat)하지 않고, 있는 그대로 보냅니다.
+  watch(
+    () => tripStore.itinerary, 
+    (newItinerary) => {
+      if (!mapAreaRef.value) return;
+  
+      // MapArea가 날짜별(index별)로 색을 칠할 수 있도록 전체 구조를 전달
+      mapAreaRef.value.drawRoute(newItinerary);
+    },
+    { deep: true }
+  );
+  
   const loadRealData = async () => {
     try {
       const response = await getAttractionsApi({ areaCode: 0 });
       allAttractions.value = response.data;
-      if (mapAreaRef.value) {
-        mapAreaRef.value.setMarkers(allAttractions.value);
-      }
+      console.log("검색용 데이터 로드 완료 (지도 표시 안 함):", allAttractions.value.length + "개");
     } catch (error) {
       console.error("관광지 데이터 로드 실패", error);
     }
@@ -228,12 +220,16 @@ const fetchAiPlan = async () => {
     isSearching.value = true;
     setTimeout(() => {
       searchResults.value = allAttractions.value.filter(
-        (p) =>
-          p.name.includes(searchQuery.value) ||
-          (p.address && p.address.includes(searchQuery.value))
+        (p) => p.name.includes(searchQuery.value)
       );
       isSearching.value = false;
     }, 200);
+  };
+  
+  const handleMapClick = () => {
+    if (searchResults.value.length > 0) {
+      searchResults.value = [];
+    }
   };
   
   const moveToLocation = (place) => {
@@ -241,6 +237,7 @@ const fetchAiPlan = async () => {
     const lng = place.longitude || place.lng;
     if (mapAreaRef.value && lat && lng) {
       mapAreaRef.value.moveCamera(lat, lng);
+      searchResults.value = [];
     }
   };
   
@@ -466,7 +463,11 @@ const fetchAiPlan = async () => {
   
       <div class="flex-1 flex overflow-hidden">
         <div class="w-[65%] relative">
-          <MapArea ref="mapAreaRef" @add-to-plan="openAddModalFromSearch" />
+          <MapArea 
+            ref="mapAreaRef" 
+            @add-to-plan="openAddModalFromSearch" 
+            @map-clicked="handleMapClick"
+          />
   
           <div class="absolute top-6 left-6 right-6 z-10 flex flex-col gap-3 pointer-events-none">
             

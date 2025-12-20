@@ -4,8 +4,12 @@
 
 <mapper namespace="com.ssafy.gitaek.mapper.PoiMapper">
     <insert id="insertPoi" parameterType="com.ssafy.gitaek.dto.PoiDto">
-        INSERT INTO POI (name, description, address, latitude, longitude, thumbnail_url, region_id)
-        VALUES (#{name}, #{description}, #{address}, #{latitude}, #{longitude}, #{thumbnailUrl}, #{regionId})
+        INSERT INTO POI (
+        name, description, address, latitude, longitude, thumbnail_url, region_id,
+        content_type_id  )
+        VALUES (
+        #{name}, #{description}, #{address}, #{latitude}, #{longitude}, #{thumbnailUrl}, #{regionId},
+        #{contentTypeId} )
     </insert>
 
     <select id="selectPois" parameterType="int" resultType="com.ssafy.gitaek.dto.PoiDto">
@@ -40,4 +44,14 @@
         WHERE address LIKE CONCAT('%', #{keyword}, '%')
         LIMIT 80
     </select>
+
+    <select id="getAttractionsByBounds" resultType="com.ssafy.gitaek.dto.PoiDto">
+        SELECT *
+        FROM POI
+        WHERE latitude BETWEEN #{minLat} AND #{maxLat}
+        AND longitude BETWEEN #{minLng} AND #{maxLng}
+        <if test="contentTypeId > 0">
+            AND content_type_id = #{contentTypeId}
+        </if>
+        LIMIT 100 </select>
 </mapper>

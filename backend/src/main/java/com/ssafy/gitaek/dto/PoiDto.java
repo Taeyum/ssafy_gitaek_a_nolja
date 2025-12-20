@@ -13,4 +13,5 @@ public class PoiDto {
     private BigDecimal longitude; // 경도
     private String thumbnailUrl;
     private int regionId;         // 외래키
+    private int contentTypeId;
 }

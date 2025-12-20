@@ -36,7 +36,8 @@ CREATE TABLE POI (
     latitude        DECIMAL(10, 8),
     longitude       DECIMAL(11, 8),
     thumbnail_url   VARCHAR(2048),
-    region_id       INT NOT NULL
+    region_id       INT NOT NULL,
+    content_type_id INT
 );
 
 -- [4] 여행 (Trip)

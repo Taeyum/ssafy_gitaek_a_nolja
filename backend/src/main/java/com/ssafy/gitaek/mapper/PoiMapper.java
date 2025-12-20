@@ -22,4 +22,13 @@ public interface PoiMapper {
 
     // 특정 지역(키워드)의 관광지 이름 목록 조회 (AI 제공용)
     List<String> findNamesByKeyword(@Param("keyword") String keyword);
+
+    // 지도 영역(Bounds) 기반 검색
+    List<PoiDto> getAttractionsByBounds(
+            @Param("minLat") double minLat,
+            @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng,
+            @Param("maxLng") double maxLng,
+            @Param("contentTypeId") int contentTypeId // 파라미터 추가
+    );
 }
