@@ -31,9 +31,7 @@
     <last-used-providers />
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
-    <open-files>
-      <object connection-id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a" object-ref="consoles/Connection" />
-    </open-files>
+    <open-files />
   </component>
   <component name="DBNavigator.Project.DatabaseSessionManager">
     <connection id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a" />
@@ -43,6 +41,9 @@
   </component>
   <component name="DBNavigator.Project.ExecutionManager">
     <retain-sticky-names value="false" />
+  </component>
+  <component name="DBNavigator.Project.FileConnectionMappingManager">
+    <mapping file-url="file://$PROJECT_DIR$/backend/src/main/resources/ssafy_trip.sql" connection-id="5e8e502b-98bd-4bd9-b2f2-1348d349d46a" session-id="MAIN" current-schema="ssafy_trip" />
   </component>
   <component name="DBNavigator.Project.ObjectQuickFilterManager">
     <last-used-operator value="EQUAL" />
