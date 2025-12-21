@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.gitaek.mapper.ChecklistMapper">
+
+    <select id="selectList" resultType="com.ssafy.gitaek.dto.ChecklistDto">
+        SELECT check_id AS checkId, user_id AS userId, plan_id AS planId, content, is_checked AS isChecked
+          FROM Checklist
+         WHERE user_id = #{userId} 
+           AND plan_id = #{planId}  ORDER BY check_id DESC
+    </select>
+
+    <insert id="insertItem">
+        INSERT INTO Checklist (user_id, plan_id, content, is_checked)
+        VALUES (#{userId}, #{planId}, #{content}, false)
+    </insert>
+
+    <delete id="deleteItem">
+        DELETE FROM Checklist WHERE check_id = #{checkId} AND user_id = #{userId}
+    </delete>
+
+    <update id="toggleItem">
+        UPDATE Checklist SET is_checked = NOT is_checked WHERE check_id = #{checkId} AND user_id = #{userId}
+    </update>
+
+    <delete id="deleteAllItems">
+        DELETE FROM Checklist WHERE user_id = #{userId} AND plan_id = #{planId}
+    </delete>
+
+    <update id="updateAllCheck">
+        UPDATE Checklist SET is_checked = true WHERE user_id = #{userId} AND plan_id = #{planId}
+    </update>
+    
+    <select id="selectMyPlans" resultType="com.ssafy.gitaek.dto.PlanSimpleDto">
+        SELECT trip_id AS planId, title
+          FROM Trip
+         WHERE owner_id = #{userId}
+            OR trip_id IN (
+                SELECT trip_id 
+                  FROM Trip_Participant 
+                 WHERE user_id = #{userId}
+            )
+         ORDER BY created_at DESC
+    </select>
+
+</mapper>

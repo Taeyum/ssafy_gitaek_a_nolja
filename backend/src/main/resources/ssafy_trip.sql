@@ -133,3 +133,23 @@ INSERT INTO Region (region_id, name) VALUES
 -- (만약 위 INSERT 문에 admin@test.com이 없다면 0 rows affected가 뜨겠지만, 
 --  나중에 회원가입 후 이 줄만 따로 실행하면 관리자가 됩니다.)
 -- UPDATE Users SET role = 'ADMIN' WHERE email = 'admin@test.com';
+
+
+-- 준비물 체크리스트 테이블
+CREATE TABLE Checklist (
+    check_id    INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    content     VARCHAR(100) NOT NULL, -- 준비물 내용 (예: 여권, 충전기)
+    is_checked  BOOLEAN DEFAULT FALSE, -- 챙겼는지 여부
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+-- 1. plan_id 컬럼이 없어서 에러가 나는 것이니 추가해줍니다.
+ALTER TABLE Checklist ADD COLUMN plan_id INT DEFAULT 0;
+
+-- 2. (혹시 모르니) 외래키 제약조건이 있다면 삭제합니다.
+-- (0번으로 저장할 때 에러 안 나게 하기 위함)
+-- 만약 "Error ... constraint does not exist" 라고 뜨면 이미 없는 거니 무시하셔도 됩니다.
+-- ALTER TABLE Checklist DROP FOREIGN KEY fk_checklist_plan;
