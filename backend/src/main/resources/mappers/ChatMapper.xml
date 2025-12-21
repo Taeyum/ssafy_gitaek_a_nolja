@@ -23,9 +23,10 @@
         r.trip_id,
         m.user_id,
         m.content,
-        DATE_FORMAT(m.sent_at, '%H:%i') as sentAt,
+        DATE_FORMAT(DATE_ADD(m.sent_at, INTERVAL 9 HOUR), '%H:%i') as sentAt,
+
         u.nickname as senderName,
-        u.role as senderProfileImg -- (프로필 이미지가 없어서 임시로 role 사용하거나 null 처리)
+        u.role as senderProfileImg
         FROM Chat_Message m
         JOIN Chat_Room r ON m.chat_room_id = r.chat_room_id
         JOIN Users u ON m.user_id = u.user_id

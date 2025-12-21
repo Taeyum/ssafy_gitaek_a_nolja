@@ -52,8 +52,8 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/users", "/api/users/login").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/attractions/**", "/api/trips/**").permitAll() 
 						// http://localhost:8080/api/admin/load-data  허용																					
-						.requestMatchers("/api/admin/load-data").permitAll()																						// (필요시
-																											
+						.requestMatchers("/api/admin/load-data").permitAll()
+						.requestMatchers("/ws-stomp/**").permitAll()
 						.requestMatchers("/api/users/check-email", "/api/users/password-recovery").permitAll()
 						// 2. 관리자만 가능한 곳
 						.requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")

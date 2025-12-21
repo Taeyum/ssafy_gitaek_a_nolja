@@ -23,6 +23,8 @@
   import { getAttractionsApi } from "@/api/attraction";
   import { useUserStore } from "@/stores/userStore";
   import http from "@/api/http";
+
+  import ToastNotification from "@/components/ToastNotification.vue";
   
   const userStore = useUserStore();
   const tripStore = useTripStore();
@@ -38,6 +40,27 @@
   const activeTab = ref("itinerary");
   const modalPoiId = ref(0);
   
+  // ★ [추가] 안 읽은 채팅 개수 관리
+  const unreadChatCount = ref(0);
+
+  // ★ [추가] 탭 전환 함수 (채팅 탭 누르면 카운트 초기화)
+  const switchTab = (tabName) => {
+    activeTab.value = tabName;
+    if (tabName === 'chat') {
+      unreadChatCount.value = 0;
+    }
+  };
+
+  // ★ [추가] 메시지가 오면 카운트 증가 (채팅 탭 아닐 때만)
+  watch(
+    () => tripStore.messages.length,
+    (newLen, oldLen) => {
+      if (activeTab.value !== 'chat' && newLen > oldLen) {
+        unreadChatCount.value += (newLen - oldLen);
+      }
+    }
+  );
+
   // 검색 관련
   const searchQuery = ref("");
   const searchResults = ref([]);
@@ -56,8 +79,8 @@
   const modalLng = ref(0);
   
   /* =========================================
-     🤖 AI 여행 코스 추천 로직
-     ========================================= */
+      🤖 AI 여행 코스 추천 로직
+      ========================================= */
   const showAiModal = ref(false);
   const aiForm = ref({
     destination: "",
@@ -103,10 +126,9 @@
   
       console.log("🤖 AI 원본 응답:", aiPlans);
   
-      // ★ [수정] 지역 필터링 ("제주"를 선택했으면 주소에 "제주"가 있어야 함)
+      // 지역 필터링 ("제주"를 선택했으면 주소에 "제주"가 있어야 함)
       const targetRegion = aiForm.value.destination.substring(0, 2); 
       
-      // 필터링 적용 (해당 지역이 주소에 없으면 제외)
       const filteredAiPlans = aiPlans.filter(plan => {
         if (!plan.address || !plan.address.includes(targetRegion)) {
           console.warn(`🚨 지역 불일치로 제외됨: ${plan.title} (${plan.address})`);
@@ -166,8 +188,8 @@
   };
   
   /* =========================================
-     기본 로직
-     ========================================= */
+      기본 로직
+      ========================================= */
   
   onMounted(async () => {
     await loadRealData();
@@ -185,13 +207,33 @@
         }
       );
     }
+
+  //   // 알림 소켓 연결 (여행 방 ID가 있을 때만)
+  //   if (tripStore.tripInfo?.tripId) {
+  //     tripStore.connectTripSocket(tripStore.tripInfo.tripId);
+  //   }
   });
+
+  watch(
+  () => tripStore.tripInfo.tripId,
+  (newId) => {
+    // ID가 유효한 숫자일 때만 연결 시도
+    if (newId && newId > 0) {
+      console.log(`🚀 여행 ID(${newId}) 확인됨 -> 소켓 연결 시도`);
+      tripStore.connectTripSocket(newId);
+    }
+  },
+  { immediate: true } // 이미 ID가 있으면 즉시 실행
+);
   
   onUnmounted(async () => {
     if (isEditing.value) {
       await tripStore.finishEdit();
     }
     tripStore.stopPolling();
+
+    // 알림 소켓 연결 해제
+    tripStore.disconnectTripSocket();
   });
   
   watch(
@@ -250,7 +292,7 @@
     }
   };
   
-  // ★ [신규] 일정 리스트 클릭 시 지도 이동
+  // 일정 리스트 클릭 시 지도 이동
   const handleFocusPlace = ({ lat, lng }) => {
     if (mapAreaRef.value) {
       mapAreaRef.value.moveCamera(lat, lng);
@@ -397,7 +439,9 @@
   </script>
   
   <template>
-    <div class="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div class="h-screen flex flex-col bg-gray-50 overflow-hidden relative">
+      <ToastNotification :notifications="tripStore.notifications" />
+
       <header
         class="bg-white px-6 py-4 flex items-center justify-between shadow-sm border-b z-20"
       >
@@ -572,7 +616,7 @@
         >
           <div class="flex border-b bg-gray-50">
             <button
-              @click="activeTab = 'itinerary'"
+              @click="switchTab('itinerary')"
               class="flex-1 py-4 text-base font-bold transition-colors border-b-2"
               :class="
                 activeTab === 'itinerary'
@@ -583,8 +627,8 @@
               일정
             </button>
             <button
-              @click="activeTab = 'chat'"
-              class="flex-1 py-4 text-base font-bold transition-colors border-b-2"
+              @click="switchTab('chat')"
+              class="flex-1 py-4 text-base font-bold transition-colors border-b-2 relative"
               :class="
                 activeTab === 'chat'
                   ? 'bg-white text-[#DE2E5F] border-[#DE2E5F]'
@@ -592,6 +636,12 @@
               "
             >
               채팅
+              <span 
+                v-if="unreadChatCount > 0" 
+                class="absolute top-3 right-8 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full animate-bounce shadow-sm"
+              >
+                {{ unreadChatCount > 99 ? '99+' : unreadChatCount }}
+              </span>
             </button>
           </div>
           <div class="flex-1 overflow-hidden relative">
@@ -610,7 +660,7 @@
   
       <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
       >
         <div
           class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-6"
@@ -697,7 +747,7 @@
   
       <div 
         v-if="showAiModal" 
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in"
+        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in"
       >
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-8 relative">
           <h3 class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">

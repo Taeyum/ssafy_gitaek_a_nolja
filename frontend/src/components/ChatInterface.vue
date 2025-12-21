@@ -10,7 +10,7 @@ const userStore = useUserStore()
 const newMessage = ref('')
 const messagesContainer = ref(null)
 
-// 스크롤을 맨 아래로 내리는 함수
+// 스크롤 내리기
 const scrollToBottom = async () => {
   await nextTick()
   if (messagesContainer.value) {
@@ -18,19 +18,28 @@ const scrollToBottom = async () => {
   }
 }
 
-// 메시지가 오면 스크롤 내리기
-watch(() => tripStore.messages, () => {
+// 메시지 목록이 바뀌면(새 메시지 오면) 스크롤 내리기
+watch(() => tripStore.messages.length, () => {
   scrollToBottom()
-}, { deep: true })
+})
 
-const handleSend = async () => {
+const handleSend = () => {
   if (!newMessage.value.trim()) return
-  
-  await tripStore.sendMessage(newMessage.value)
-  newMessage.value = '' // 입력창 비우기
+
+  // 스토어의 함수 사용
+  tripStore.sendChatMessage(
+    newMessage.value, 
+    userStore.userInfo.id, 
+    userStore.userInfo.name
+  )
+  newMessage.value = ''
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 처음 켜졌을 때 기존 메시지 로드 (이미 스토어에 있으면 생략 가능하지만 안전하게)
+  if (tripStore.messages.length === 0) {
+      await tripStore.fetchMessages()
+  }
   scrollToBottom()
 })
 </script>
@@ -39,34 +48,37 @@ onMounted(() => {
   <div class="flex flex-col h-full bg-white">
     <div class="p-4 border-b bg-white flex justify-between items-center shadow-sm z-10">
       <h3 class="font-bold text-lg text-gray-800">💬 실시간 채팅</h3>
-      <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
-        참여자 {{ tripStore.tripInfo.currentParticipants || 0 }}명
+      <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+        {{ tripStore.tripInfo.currentParticipants }}명 참여 중
       </span>
     </div>
 
-    <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 scroll-smooth">
-      <div v-if="tripStore.messages.length === 0" class="text-center text-gray-400 text-sm py-10">
-        아직 대화가 없습니다.<br>첫 메시지를 남겨보세요! 👋
-      </div>
-
+    <div 
+      class="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F8F9FA]" 
+      ref="messagesContainer"
+    >
       <div 
         v-for="msg in tripStore.messages" 
-        :key="msg.messageId" 
+        :key="msg.messageId || Math.random()" 
         class="flex gap-3"
-        :class="msg.mine ? 'flex-row-reverse' : ''"
+        :class="(msg.userId === userStore.userInfo.id) ? 'flex-row-reverse' : 'flex-row'"
       >
-        <div v-if="!msg.mine" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
-           <UserIcon class="w-5 h-5 text-gray-500" />
+        <div 
+          v-if="msg.userId !== userStore.userInfo.id"
+          class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden"
+        >
+          <img v-if="msg.senderProfileImg" :src="msg.senderProfileImg" class="w-full h-full object-cover"/>
+          <UserIcon v-else class="w-5 h-5 text-gray-500" />
         </div>
 
-        <div class="flex flex-col max-w-[70%]" :class="msg.mine ? 'items-end' : 'items-start'">
-          <div v-if="!msg.mine" class="text-xs text-gray-500 mb-1 ml-1">
+        <div class="flex flex-col max-w-[70%]" :class="(msg.userId === userStore.userInfo.id) ? 'items-end' : 'items-start'">
+          <div v-if="msg.userId !== userStore.userInfo.id" class="text-xs text-gray-500 mb-1 ml-1">
             {{ msg.senderName }}
           </div>
           
           <div 
             class="px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm break-words"
-            :class="msg.mine 
+            :class="(msg.userId === userStore.userInfo.id)
               ? 'bg-[#DE2E5F] text-white rounded-tr-none' 
               : 'bg-white text-gray-700 border border-gray-100 rounded-tl-none'"
           >
@@ -86,11 +98,11 @@ onMounted(() => {
           @keydown.enter.prevent="handleSend"
           type="text" 
           placeholder="메시지를 입력하세요..." 
-          class="w-full bg-gray-100 text-gray-800 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-[#DE2E5F] focus:bg-white transition-all placeholder-gray-400"
+          class="w-full bg-gray-100 text-gray-800 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-[#DE2E5F] focus:bg-white transition-all"
         />
         <button 
           @click="handleSend"
-          class="absolute right-2 p-2 bg-[#DE2E5F] text-white rounded-full hover:bg-[#c92552] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="absolute right-2 p-2 bg-[#DE2E5F] text-white rounded-full hover:bg-[#c92552] transition-colors shadow-md disabled:opacity-50"
           :disabled="!newMessage.trim()"
         >
           <Send class="w-4 h-4" />

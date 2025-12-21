@@ -16,6 +16,10 @@ import {
   sendMessageApi,
 } from "@/api/trip";
 
+// ★ [추가] 웹소켓 라이브러리 임포트
+import { Stomp } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
+
 export const useTripStore = defineStore("trip", () => {
   // --- 상태 (State) ---
   const tripInfo = ref({
@@ -36,12 +40,85 @@ export const useTripStore = defineStore("trip", () => {
   const myTrips = ref([]);
   const messages = ref([]);
 
+  // ★ [추가] 알림 리스트 & 소켓 클라이언트 객체
+  const notifications = ref([]);
+  let stompClient = null;
+
   // 동시성 제어용
   const currentEditorName = ref(null);
   const isLocked = ref(false);
   let pollingInterval = null;
 
   // --- 액션 (Actions) ---
+
+  // ★ [추가] 알림 추가 및 자동 삭제 로직
+  const addNotification = (type, message, senderName) => {
+    const id = Date.now(); // 고유 ID 생성
+    notifications.value.push({ id, type, message, senderName });
+
+    // 3초 뒤에 리스트에서 제거 (자동 사라짐 효과)
+    setTimeout(() => {
+      notifications.value = notifications.value.filter(n => n.id !== id);
+    }, 3000);
+  };
+
+  // ★ [수정] 통합 소켓 연결 (알림 + 채팅)
+  const connectTripSocket = (tripId) => {
+    // 이미 연결되어 있다면 중복 연결 방지
+    if (stompClient && stompClient.connected) return;
+
+    const socket = new SockJS('http://localhost:8080/ws-stomp');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = () => {}; // 콘솔 로그 끄기
+
+    stompClient.connect({}, () => {
+      console.log('🔗 통합 소켓 연결됨 (알림+채팅)');
+
+      // 1. 알림 구독 (/sub/trip/{tripId}/notification)
+      stompClient.subscribe(`/sub/trip/${tripId}/notification`, (res) => {
+        const noti = JSON.parse(res.body);
+        
+        // 화면에 토스트 알림 띄우기
+        addNotification(noti.type, noti.message, noti.senderName);
+
+        // 편집 알림('EDIT')이 오면, 일정 목록을 최신으로 새로고침
+        if (noti.type === 'EDIT') {
+           refreshItinerary();
+        }
+      });
+
+      // 2. 채팅 구독 (/sub/chat/{tripId})
+      stompClient.subscribe(`/sub/chat/${tripId}`, (res) => {
+        const received = JSON.parse(res.body);
+        // 메시지 리스트에 추가 (ChatInterface나 뱃지에서 사용됨)
+        messages.value.push(received);
+      });
+    });
+  };
+
+  // ★ [추가] 소켓으로 채팅 전송하는 함수
+  const sendChatMessage = (content, userId, senderName) => {
+    if (!stompClient || !stompClient.connected) return;
+    
+    const msgPayload = {
+      tripId: tripInfo.value.tripId,
+      userId: userId,
+      content: content,
+      senderName: senderName
+    };
+    
+    // /pub/chat/message 로 전송
+    stompClient.send("/pub/chat/message", {}, JSON.stringify(msgPayload));
+  };
+
+  // ★ [추가] 소켓 연결 해제
+  const disconnectTripSocket = () => {
+    if (stompClient) {
+      stompClient.disconnect();
+      stompClient = null;
+      console.log('🔌 소켓 연결 해제');
+    }
+  };
 
   const fetchMyTrips = async () => {
     try {
@@ -54,8 +131,6 @@ export const useTripStore = defineStore("trip", () => {
 
   // ★ [수정 1] loadTrip: 날짜 계산 + 변수명 방어 로직 (하이브리드)
   const loadTrip = async (rawTrip) => {
-    // 1. 변수명 통일 (Normalization)
-    // 백엔드가 어떤 형태(DTO/Map)로 주든 다 받아냅니다.
     const normalizedData = {
       tripId: rawTrip.tripId || rawTrip.trip_id,
       title: rawTrip.title,
@@ -75,45 +150,35 @@ export const useTripStore = defineStore("trip", () => {
       inviteCode: rawTrip.inviteCode || rawTrip.invite_code || "",
       ownerId: rawTrip.ownerId || rawTrip.owner_id,
       style: rawTrip.style || "friend",
-      // DB에 duration 없으면 0으로 둠 (아래서 계산)
       duration: rawTrip.duration || 0,
     };
 
-    // 2. 기간(Duration) 정밀 계산
-    // DB에 duration 컬럼이 없으므로, 날짜 차이를 계산해서 복원합니다.
     let dayCount = normalizedData.duration;
 
-    // 기간 정보가 없으면 날짜 차이로 계산
     if (!dayCount || dayCount < 1) {
       const start = new Date(normalizedData.startDate);
       const end = new Date(normalizedData.endDate);
 
       if (!isNaN(start) && !isNaN(end)) {
         const diffTime = end.getTime() - start.getTime();
-        // (종료일 - 시작일) / 하루 + 1일 = 기간
         dayCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       } else {
-        dayCount = 1; // 날짜 깨지면 기본 1일
+        dayCount = 1; 
       }
     }
 
-    // 최소 1일 보장 (안전장치)
     dayCount = Math.max(1, dayCount);
 
-    // 3. 상태 업데이트
     tripInfo.value = {
       ...normalizedData,
       duration: dayCount,
     };
 
-    // 4. 일정 배열 틀(Itinerary) 생성
-    // (계산된 기간만큼 반복문을 돕니다)
     const newItinerary = [];
     const startDateObj = new Date(normalizedData.startDate);
 
     for (let i = 0; i < dayCount; i++) {
       const currentDate = new Date(startDateObj);
-      // 날짜 유효성 체크 후 더하기
       if (!isNaN(startDateObj)) {
         currentDate.setDate(startDateObj.getDate() + i);
       }
@@ -131,36 +196,30 @@ export const useTripStore = defineStore("trip", () => {
       });
     }
 
-    // 화면 먼저 그리기
     itinerary.value = newItinerary;
 
-    // 5. DB 세부 일정 데이터 채우기
     await refreshItinerary(newItinerary);
   };
 
-  // ★ [수정 2] createNewTrip: 종료일 직접 계산해서 전송 (핵심!)
+  // ★ [수정 2] createNewTrip: 종료일 직접 계산해서 전송
   const createNewTrip = async (info) => {
     try {
-      // 1. 기간 안전장치 (0이나 빈값이면 1일로 강제)
       let safeDuration = parseInt(info.duration);
       if (isNaN(safeDuration) || safeDuration < 1) {
         safeDuration = 1;
       }
 
-      // 2. 종료일 계산 (시작일 + 기간 - 1)
       const start = new Date(info.startDate);
       const end = new Date(start);
-      // 예: 23일 시작, 1일 기간 -> 23 + 0 = 23일 종료 (정상)
       end.setDate(start.getDate() + (safeDuration - 1));
 
       const endDateStr = end.toISOString().split("T")[0];
 
-      // 3. 백엔드 전송 (endDate 필수 포함!)
       const payload = {
         title: info.title,
         startDate: info.startDate,
-        endDate: endDateStr, // ★ 계산된 종료일 전송
-        duration: safeDuration, // ★ 안전한 기간 전송
+        endDate: endDateStr, 
+        duration: safeDuration, 
         maxParticipants: info.members,
         style: info.style,
       };
@@ -170,14 +229,12 @@ export const useTripStore = defineStore("trip", () => {
       const response = await createTripApi(payload);
       const savedTrip = response.data;
 
-      // 4. 저장 직후에는 백엔드 응답을 기다리지 말고, 내가 계산한 값으로 즉시 로딩
-      // (백엔드가 duration을 안 줘도 화면은 정상 작동하게 함)
       const optimisticTripData = {
-        ...savedTrip, // ID나 코드 등은 백엔드꺼 사용
+        ...savedTrip, 
         title: info.title,
         startDate: info.startDate,
         endDate: endDateStr,
-        duration: safeDuration, // 내가 보낸 기간 그대로 사용
+        duration: safeDuration, 
         maxMembers: info.members,
         style: info.style,
       };
@@ -201,18 +258,15 @@ export const useTripStore = defineStore("trip", () => {
       const res = await getSchedulesApi(tripInfo.value.tripId);
       const dbSchedules = res.data || [];
 
-      // 내용 비우기
       currentItinerary.forEach((day) => {
         day.items = [];
       });
 
       dbSchedules.forEach((item) => {
-        // [변수명 방어] DB: trip_day vs JS: tripDay
         const tripDay = item.tripDay || item.trip_day || 1;
         const dayIndex = tripDay - 1;
 
         if (currentItinerary[dayIndex]) {
-          // [변수명 방어] DB: schedule_time
           let rawTime = item.scheduleTime || item.schedule_time || "12:00";
           let cleanTime =
             rawTime.length > 5 ? rawTime.substring(0, 5) : rawTime;
@@ -233,7 +287,6 @@ export const useTripStore = defineStore("trip", () => {
         }
       });
 
-      // 시간순 정렬
       currentItinerary.forEach((day) => {
         day.items.sort((a, b) => a.time.localeCompare(b.time));
       });
@@ -246,18 +299,14 @@ export const useTripStore = defineStore("trip", () => {
     }
   };
 
-  // ... (이하 기존 기능 유지) ...
-
   const addPlace = async (dayId, place, time) => {
     const targetDay = itinerary.value.find((d) => d.id === dayId);
     if (!targetDay) return;
 
     const inputTime = time ? time : "12:00";
 
-    // 중복 체크
     if (
       targetDay.items.some((item) => {
-        // 시간 비교 시 초 단위 제거
         const itemTimeSimple = item.time.substring(0, 5);
         const inputTimeSimple = inputTime.substring(0, 5);
         return itemTimeSimple === inputTimeSimple && item.poiId !== place.poiId;
@@ -282,7 +331,7 @@ export const useTripStore = defineStore("trip", () => {
     targetDay.items.sort((a, b) => a.time.localeCompare(b.time));
 
     try {
-      const dayNumber = parseInt(dayId); // 숫자 변환
+      const dayNumber = parseInt(dayId); 
       await addScheduleApi({
         tripId: tripInfo.value.tripId,
         poiId: place.poiId,
@@ -359,6 +408,7 @@ export const useTripStore = defineStore("trip", () => {
         tripInfo.value.currentParticipants = trip.currentParticipants;
       }
 
+      // 채팅 메시지 REST 조회 (소켓 연결 전 초기화용)
       await fetchMessages();
 
       if (trip.currentEditorId) {
@@ -456,6 +506,13 @@ export const useTripStore = defineStore("trip", () => {
     tripInfo,
     itinerary,
     myTrips,
+    messages,
+    // ★ [추가] 알림 및 소켓 관련 State & Action 리턴
+    notifications,
+    connectTripSocket,
+    disconnectTripSocket,
+    sendChatMessage, // 소켓 전송용 함수
+    
     currentEditorName,
     isLocked,
     fetchMyTrips,
@@ -471,9 +528,8 @@ export const useTripStore = defineStore("trip", () => {
     tryRequestEdit,
     finishEdit,
     leaveTrip,
-    messages,
     fetchMessages,
-    sendMessage,
+    sendMessage, // REST 전송용 (필요시 사용)
     refreshItinerary,
   };
 });

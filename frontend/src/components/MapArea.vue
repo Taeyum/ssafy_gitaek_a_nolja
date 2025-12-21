@@ -124,13 +124,12 @@ const fetchMarkersInBounds = async () => {
   }
 }
 
-// ★ [디자인 개선] 깔끔하고 감각적인 인포윈도우 스타일
 const renderMarkers = (places) => {
   clearSearchMarkers()
   currentPlaces = places
 
   if (activeInfoWindow) {
-    activeInfoWindow.close()
+    activeInfoWindow.setMap(null)
     activeInfoWindow = null
   }
 
@@ -140,151 +139,191 @@ const renderMarkers = (places) => {
     if (!lat || !lng) return
 
     const position = new window.kakao.maps.LatLng(lat, lng)
+    
     const marker = new window.kakao.maps.Marker({
       map: mapInstance,
       position: position,
-      title: place.name
+      title: place.name,
+      zIndex: 0
     })
 
-    const imageUrl = place.thumbnailUrl || 'https://via.placeholder.com/280x160?text=No+Image';
+    const imageUrl = place.thumbnailUrl || 'https://placehold.co/280x160?text=Trip';
 
-    // ============================================================
-    // 🎨 [Design] 깔끔한 모던 카드 스타일 (Inline CSS)
-    // ============================================================
-    const content = `
+    // 오버레이 컨텐츠 (DOM Element)
+    const content = document.createElement('div');
+    content.style.cssText = 'position: absolute; left: -140px; bottom: 50px; width: 280px;';
+
+    content.innerHTML = `
       <div style="
-          width: 280px; 
           background: #fff; 
           border-radius: 12px; 
-          box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
+          box-shadow: 0 10px 25px rgba(0,0,0,0.25); 
           overflow: hidden; 
           font-family: 'Pretendard', sans-serif;
-          margin-bottom: 2px; /* 그림자 잘림 방지 */
+          display: flex; flex-direction: column;
       ">
-        <div style="width: 100%; height: 160px; position: relative; background-color: #f3f4f6;">
-           <img src="${imageUrl}" alt="img" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/280x160?text=Trip';"/>
+        <div style="width: 100%; height: 150px; position: relative; background-color: #eee;">
+           <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" />
            
+           <button class="close-btn" style="
+              position: absolute; top: 10px; right: 10px;
+              background: rgba(0,0,0,0.6); color: white;
+              border: none; border-radius: 50%; width: 26px; height: 26px;
+              cursor: pointer; display: flex; align-items: center; justify-content: center;
+              font-size: 14px; padding: 0; z-index: 10;
+           ">✕</button>
+
            <div style="
                position: absolute; bottom: 0; left: 0; right: 0;
-               padding: 40px 16px 12px 16px;
-               background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+               padding: 30px 16px 12px 16px;
+               background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
                color: white;
            ">
-              <div style="font-weight: 700; font-size: 18px; line-height: 1.2;">${place.name}</div>
-              <div style="font-size: 12px; opacity: 0.9; margin-top: 4px; font-weight: 300;">📍 ${place.address || '주소 정보 없음'}</div>
+              <div style="
+                  font-weight: 700; font-size: 18px; line-height: 1.3; 
+                  word-break: keep-all; 
+                  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+              ">${place.name}</div>
+              <div style="
+                  font-size: 12px; opacity: 0.95; margin-top: 4px; font-weight: 300;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+              ">📍 ${place.address || '주소 정보 없음'}</div>
            </div>
         </div>
 
         <div style="padding: 16px;">
-           
-           <div style="
-               background-color: #F8F9FA; 
-               border: 1px solid #E9ECEF;
-               border-radius: 8px; 
-               padding: 12px; 
-               margin-bottom: 16px;
+           <div class="scroll-box" style="
+               background-color: #F8F9FA; border: 1px solid #E9ECEF;
+               border-radius: 8px; padding: 12px; margin-bottom: 12px;
+               max-height: 100px; overflow-y: auto; 
+               overscroll-behavior: contain;
            ">
-              <div style="
-                  font-size: 11px; 
-                  font-weight: 700; 
-                  color: #DE2E5F; 
-                  margin-bottom: 6px; 
-                  display: flex; align-items: center; gap: 4px;
-                  text-transform: uppercase; letter-spacing: 0.5px;
-              ">
-                  <span style="font-size: 14px;">✨</span> AI SUMMARY
+              <div style="font-size: 11px; font-weight: 700; color: #DE2E5F; margin-bottom: 6px;">
+                  ✨ AI SUMMARY
               </div>
-              
-              <p id="desc-${place.poiId}" style="
-                  font-size: 13px; 
-                  color: #495057; 
-                  line-height: 1.5; 
-                  margin: 0; 
-                  word-break: keep-all;
-                  min-height: 20px;
+              <p class="ai-desc" style="
+                  font-size: 13px; color: #495057; line-height: 1.5; margin: 0;
+                  word-break: keep-all; white-space: normal;
               ">
-                 ${place.description ? place.description : '<span style="color:#aaa;">AI가 장소를 분석하고 있어요...</span>'}
+                 ${place.description ? place.description : '<span style="color:#aaa;">AI 분석 중...</span>'}
               </p>
            </div>
 
-           <button
-              onclick="window.dispatchEvent(new CustomEvent('add-place-map', { detail: ${place.poiId} }))"
-              style="
-                 width: 100%;
-                 background-color: #DE2E5F; 
-                 color: white; 
-                 border: none; 
-                 border-radius: 8px; 
-                 padding: 12px; 
-                 font-size: 14px; 
-                 font-weight: 700; 
-                 cursor: pointer;
-                 transition: background 0.2s;
-              "
-              onmouseover="this.style.backgroundColor='#be123c'"
-              onmouseout="this.style.backgroundColor='#DE2E5F'"
-           >
-             + 일정에 담기
-           </button>
+           <button class="add-btn" style="
+               width: 100%; background-color: #DE2E5F; color: white; 
+               border: none; border-radius: 8px; padding: 12px; 
+               font-size: 14px; font-weight: 700; cursor: pointer;
+               box-shadow: 0 4px 6px rgba(222, 46, 95, 0.2);
+           ">+ 일정에 담기</button>
         </div>
+        
+        <div style="
+            position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; 
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #fff;
+            filter: drop-shadow(0 4px 2px rgba(0,0,0,0.1));
+        "></div>
       </div>
-    `
+    `;
 
-    // 인포윈도우 생성 (removable: true -> X 버튼 생성됨)
-    const infowindow = new window.kakao.maps.InfoWindow({
+    // 3. CustomOverlay 생성
+    const overlay = new window.kakao.maps.CustomOverlay({
       content: content,
-      removable: true,
-      zIndex: 10
-    })
+      map: null,
+      position: position,
+      clickable: true,
+      zIndex: 1000
+    });
+
+    // ============================================================
+    // ★ [해결 1] 스크롤 시 지도 확대 방지 (가장 강력한 방법)
+    // ============================================================
+    // 마우스가 오버레이 위에 있으면 지도 줌을 꺼버립니다.
+    content.addEventListener('mouseenter', () => {
+      mapInstance.setZoomable(false);
+    });
+    
+    // 마우스가 떠나면 다시 지도 줌을 켭니다.
+    content.addEventListener('mouseleave', () => {
+      mapInstance.setZoomable(true);
+    });
+
+    // 모바일 터치 이벤트 전파 방지 (추가 안전장치)
+    content.addEventListener('touchmove', (e) => e.stopPropagation());
+
+
+    // 4. 버튼 이벤트 연결
+    const closeBtn = content.querySelector('.close-btn');
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        overlay.setMap(null);
+        activeInfoWindow = null;
+        mapInstance.setZoomable(true); // 닫을 때 줌 다시 켜기
+    });
+
+    const addBtn = content.querySelector('.add-btn');
+    addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        emit('add-to-plan', place);
+    });
 
     // 마커 클릭 이벤트
     window.kakao.maps.event.addListener(marker, 'click', async () => {
-      if (activeInfoWindow) activeInfoWindow.close()
+      if (activeInfoWindow) activeInfoWindow.setMap(null);
       
-      // 클릭 시 지도가 살짝 위로 이동하여 팝업이 잘 보이게 함
-      const moveLatLon = new window.kakao.maps.LatLng(lat + 0.003, lng) 
-      mapInstance.panTo(moveLatLon)
-
-      infowindow.open(mapInstance, marker)
-      activeInfoWindow = infowindow
+      // ============================================================
+      // ★ [해결 2] 픽셀 단위 계산으로 화면 위치 정확하게 잡기
+      // ============================================================
+      // 1. 현재 지도의 Projection(좌표 <-> 픽셀 변환기)을 가져옵니다.
+      const projection = mapInstance.getProjection();
       
-      emit('marker-clicked', place)
+      // 2. 마커의 현재 화면상 좌표(픽셀)를 구합니다.
+      const markerPoint = projection.pointFromCoords(position);
+      
+      // 3. 지도의 중심을 어디로 옮길지 계산합니다.
+      // 목표: 마커가 화면 중심보다 '250px 아래'에 위치하게 만들기
+      // (그래야 300px 높이의 팝업창이 화면 중앙에 예쁘게 뜨고, 검색창에 안 가려짐)
+      // 화면 중심(Center)의 Y좌표를 마커보다 250px 위쪽(숫자가 작음)으로 잡으면 됩니다.
+      const offsetY = 250; // 픽셀 단위 오프셋 (이 값을 조절해서 높이 맞추기)
+      const newCenterPoint = new window.kakao.maps.Point(markerPoint.x, markerPoint.y - offsetY);
+      
+      // 4. 계산된 픽셀 좌표를 다시 위도/경도로 변환합니다.
+      const newCenterLatLon = projection.coordsFromPoint(newCenterPoint);
+      
+      // 5. 지도를 부드럽게 이동시킵니다.
+      mapInstance.panTo(newCenterLatLon);
 
-      // 텍스트 교체 로직 (기존과 동일)
-      setTimeout(async () => {
-          const descEl = document.getElementById(`desc-${place.poiId}`)
-          if (!descEl) return;
+      overlay.setMap(mapInstance);
+      activeInfoWindow = overlay;
+      
+      emit('marker-clicked', place);
 
-          if (place.description) {
-            descEl.innerHTML = place.description.replace(/\n/g, '<br>')
-          } else {
-            try {
-              const res = await http.get(`/attractions/${place.poiId}/description`)
-              const aiText = res.data
-              place.description = aiText
-              
-              // 부드럽게 텍스트 변경
-              descEl.style.opacity = 0;
-              descEl.innerHTML = aiText.replace(/\n/g, '<br>')
-              
-              // 페이드인 효과
-              let op = 0.1;
-              let timer = setInterval(function () {
-                  if (op >= 1){ clearInterval(timer); }
-                  descEl.style.opacity = op;
-                  op += op * 0.1;
-              }, 10);
+      // AI 설명 로딩
+      if (!place.description) {
+         try {
+            const descEl = content.querySelector('.ai-desc');
+            const res = await http.get(`/attractions/${place.poiId}/description`);
+            const aiText = res.data;
+            place.description = aiText;
+            
+            descEl.style.opacity = 0;
+            descEl.innerHTML = aiText.replace(/\n/g, '<br>');
+            let op = 0.1;
+            let timer = setInterval(() => {
+                if (op >= 1) clearInterval(timer);
+                descEl.style.opacity = op;
+                op += 0.1;
+            }, 20);
+         } catch (e) {
+            console.error(e);
+         }
+      }
+    });
 
-            } catch (e) {
-              console.error(e)
-              descEl.innerText = "설명을 불러올 수 없습니다."
-            }
-          }
-      }, 100);
-    })
-
-    searchMarkers.push(marker)
-  })
+    searchMarkers.push(marker);
+  });
 }
 
 const clearSearchMarkers = () => {

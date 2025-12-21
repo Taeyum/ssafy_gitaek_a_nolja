@@ -2,7 +2,7 @@ package com.ssafy.gitaek.controller;
 
 import com.ssafy.gitaek.dto.TripCreateRequest;
 import com.ssafy.gitaek.dto.TripScheduleDto;
-import com.ssafy.gitaek.jwt.CustomUserDetails; // ★ 필수 Import
+import com.ssafy.gitaek.jwt.CustomUserDetails;
 import com.ssafy.gitaek.model.Trip;
 import com.ssafy.gitaek.service.TripService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.ssafy.gitaek.dto.NotificationDto;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -20,6 +22,9 @@ public class TripController {
 
     @Autowired
     private TripService tripService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     // 여행 생성
     @PostMapping
@@ -69,9 +74,18 @@ public class TripController {
 
     // 일정 추가 (로그인 필요 시 userDetails 추가 가능, 현재는 누구나 가능으로 둠)
     @PostMapping("/schedule")
-    public ResponseEntity<?> addSchedule(@RequestBody TripScheduleDto dto) {
+    public ResponseEntity<?> addSchedule(@RequestBody TripScheduleDto dto, @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        if (userDetails == null) return ResponseEntity.status(401).build();
+
         try {
             tripService.addSchedule(dto);
+
+            String msg = userDetails.getUser().getNickname() + "님이 새 장소를 추가했습니다.";
+            NotificationDto noti = new NotificationDto("EDIT", msg, userDetails.getUser().getNickname());
+
+            messagingTemplate.convertAndSend("/sub/trip/" + dto.getTripId() + "/notification", noti);
+
             return ResponseEntity.ok("일정 추가 성공!");
         } catch (Exception e) {
             e.printStackTrace();
@@ -125,6 +139,12 @@ public class TripController {
         String code = map.get("inviteCode");
         try {
             Trip joinedTrip = tripService.joinTripByCode(code, userDetails.getUser().getUserId());
+
+            String msg = userDetails.getUser().getNickname() + "님이 여행에 참여했습니다! 🎉";
+            NotificationDto noti = new NotificationDto("ENTRY", msg, userDetails.getUser().getNickname());
+
+            messagingTemplate.convertAndSend("/sub/trip/" + joinedTrip.getTripId() + "/notification", noti);
+
             return ResponseEntity.ok(joinedTrip);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
