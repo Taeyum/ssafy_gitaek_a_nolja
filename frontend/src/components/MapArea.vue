@@ -46,12 +46,21 @@
   // 🗺️ 지도 초기화 및 이벤트
   // ==========================================
   onMounted(() => {
-    window.addEventListener('add-place-map', handleAddPlaceEvent)
-    
+  // 1. 카카오 객체가 들어왔는지 0.1초마다 감시
+  const interval = setInterval(() => {
+    // window.kakao가 있고, 그 안에 maps가 있다면?
     if (window.kakao && window.kakao.maps) {
-      window.kakao.maps.load(() => initMap())
+      clearInterval(interval);
+      console.log("📦 카카오 객체 감지됨! 포장 뜯기 시작(load)...");
+
+      // 2. ★ autoload=false일 때는 반드시 이 load 함수 안에서 지도를 그려야 합니다.
+      window.kakao.maps.load(() => {
+        console.log("🎉 포장 뜯기 완료! 지도 그리기 시작");
+        initMap(); // 이제 LatLng를 써도 에러가 안 납니다.
+      });
     }
-  })
+  }, 100);
+});
   
   onUnmounted(() => {
     window.removeEventListener('add-place-map', handleAddPlaceEvent)
