@@ -30,6 +30,9 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(vue@3.5.25)
     devDependencies:
+      '@types/sockjs-client':
+        specifier: ^1.5.4
+        version: 1.5.4
       '@vitejs/plugin-vue':
         specifier: ^6.0.2
         version: 6.0.2(vite@7.2.4(jiti@1.21.7))(vue@3.5.25)
@@ -500,6 +503,9 @@ packages:
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
+
+  '@types/sockjs-client@1.5.4':
+    resolution: {integrity: sha512-zk+uFZeWyvJ5ZFkLIwoGA/DfJ+pYzcZ8eH4H/EILCm2OBZyHH6Hkdna1/UWL/CFruh5wj6ES7g75SvUB0VsH5w==}
 
   '@vitejs/plugin-vue@6.0.2':
     resolution: {integrity: sha512-iHmwV3QcVGGvSC1BG5bZ4z6iwa1SOpAPWmnjOErd4Ske+lZua5K9TtAVdx0gMBClJ28DViCbSmZitjWZsWO3LA==}
@@ -1673,6 +1679,8 @@ snapshots:
   '@stomp/stompjs@7.2.1': {}
 
   '@types/estree@1.0.8': {}
+
+  '@types/sockjs-client@1.5.4': {}
 
   '@vitejs/plugin-vue@6.0.2(vite@7.2.4(jiti@1.21.7))(vue@3.5.25)':
     dependencies:

@@ -16,4 +16,7 @@ public class TripScheduleDto {
     private String placeAddress;
     private Double placeLat;
     private Double placeLng;
+
+    private String duration;
+    private String travelTime;
 }

@@ -58,24 +58,31 @@
 		DELETE FROM Trip WHERE trip_id = #{tripId}
 	</delete>
 
-	<insert id="registSchedule"
-		parameterType="com.ssafy.gitaek.dto.TripScheduleDto">
-		INSERT INTO Trip_Schedule (trip_id, poi_id, trip_day,
-		visit_order, memo, schedule_time)
-		VALUES (#{tripId}, #{poiId},
-		#{tripDay},
-		(SELECT IFNULL(MAX(visit_order), 0) + 1 FROM Trip_Schedule T WHERE
-		trip_id=#{tripId} AND trip_day=#{tripDay}),
-		#{memo}, #{scheduleTime})
+	<insert id="registSchedule" parameterType="com.ssafy.gitaek.dto.TripScheduleDto">
+		INSERT INTO Trip_Schedule (
+		trip_id, poi_id, trip_day, visit_order, memo, schedule_time,
+		duration, travel_time  )
+		VALUES (
+		#{tripId}, #{poiId}, #{tripDay},
+		(SELECT IFNULL(MAX(visit_order), 0) + 1 FROM Trip_Schedule T WHERE trip_id=#{tripId} AND trip_day=#{tripDay}),
+		#{memo}, #{scheduleTime},
+		#{duration}, #{travelTime}  )
 	</insert>
 
-	<select id="selectSchedulesByTripId"
-		resultType="com.ssafy.gitaek.dto.TripScheduleDto">
-		SELECT s.schedule_id AS scheduleId, s.trip_day AS tripDay,
+	<select id="selectSchedulesByTripId" resultType="com.ssafy.gitaek.dto.TripScheduleDto">
+		SELECT
+		s.schedule_id AS scheduleId,
+		s.trip_day AS tripDay,
 		s.visit_order AS visitOrder,
-		s.memo, s.schedule_time AS scheduleTime, s.poi_id AS poiId,
-		p.name AS placeName, p.address AS placeAddress, p.latitude AS placeLat,
-		p.longitude AS placeLng, p.thumbnail_url AS thumbnailUrl
+		s.memo,
+		s.schedule_time AS scheduleTime,
+
+		s.duration,                  s.travel_time AS travelTime, s.poi_id AS poiId,
+		p.name AS placeName,
+		p.address AS placeAddress,
+		p.latitude AS placeLat,
+		p.longitude AS placeLng,
+		p.thumbnail_url AS thumbnailUrl
 		FROM Trip_Schedule s
 		JOIN POI p ON s.poi_id = p.poi_id
 		WHERE s.trip_id = #{tripId}

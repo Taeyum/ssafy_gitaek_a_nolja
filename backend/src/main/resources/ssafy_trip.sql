@@ -73,7 +73,9 @@ CREATE TABLE Trip_Schedule (
     memo        TEXT,
     trip_id     INT NOT NULL,
     poi_id      INT NOT NULL,
-    schedule_time VARCHAR(10) DEFAULT '12:00'
+    schedule_time VARCHAR(10) DEFAULT '12:00',
+    duration      VARCHAR(50),  -- 체류 시간 (예: '1시간')
+    travel_time   VARCHAR(50)   -- 이동 시간 (예: '30분')
 );
 
 -- [7] 채팅방 (Chat_Room)
@@ -153,3 +155,6 @@ ALTER TABLE Checklist ADD COLUMN plan_id INT DEFAULT 0;
 -- (0번으로 저장할 때 에러 안 나게 하기 위함)
 -- 만약 "Error ... constraint does not exist" 라고 뜨면 이미 없는 거니 무시하셔도 됩니다.
 -- ALTER TABLE Checklist DROP FOREIGN KEY fk_checklist_plan;
+
+ALTER TABLE Trip_Schedule ADD COLUMN duration VARCHAR(50);
+ALTER TABLE Trip_Schedule ADD COLUMN travel_time VARCHAR(50);

@@ -283,6 +283,9 @@ export const useTripStore = defineStore("trip", () => {
             lat: item.placeLat || item.latitude || 0,
             lng: item.placeLng || item.longitude || 0,
             poiId: item.poiId || item.poi_id,
+            // ★ [추가] 서버에서 받아온 duration, travelTime 매핑
+            duration: item.duration || "",
+            travelTime: item.travelTime || item.travel_time || "",
           });
         }
       });
@@ -325,6 +328,9 @@ export const useTripStore = defineStore("trip", () => {
       lat: place.lat || 0,
       lng: place.lng || 0,
       poiId: place.poiId,
+      // ★ [추가] 화면에 즉시 반영할 데이터
+      duration: place.duration || "",
+      travelTime: place.travelTime || "",
     };
 
     targetDay.items.push(newItem);
@@ -337,8 +343,11 @@ export const useTripStore = defineStore("trip", () => {
         poiId: place.poiId,
         tripDay: dayNumber,
         visitOrder: targetDay.items.length,
-        memo: "",
+        memo: place.memo || "", // AI가 준 메모가 있으면 저장
         scheduleTime: inputTime,
+        // ★ [추가] 서버로 보낼 데이터 (DB 저장용)
+        duration: place.duration || "",
+        travelTime: place.travelTime || "",
       });
     } catch (error) {
       alert("저장 실패. 다시 시도해주세요.");
