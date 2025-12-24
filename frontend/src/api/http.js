@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const http = axios.create({
-  baseURL: "/api",
+  baseURL: "https://gitaek.duckdns.org/api",
   headers: {
     "Content-Type": "application/json;charset=utf-8",
   },
