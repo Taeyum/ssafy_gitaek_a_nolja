@@ -153,3 +153,58 @@ ALTER TABLE Checklist ADD COLUMN plan_id INT DEFAULT 0;
 -- (0번으로 저장할 때 에러 안 나게 하기 위함)
 -- 만약 "Error ... constraint does not exist" 라고 뜨면 이미 없는 거니 무시하셔도 됩니다.
 -- ALTER TABLE Checklist DROP FOREIGN KEY fk_checklist_plan;
+
+
+-- 1. 게시판 테이블 생성 (없으면 생성)
+CREATE TABLE IF NOT EXISTS Board (
+    board_id    INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    title       VARCHAR(200) NOT NULL,
+    content     TEXT,
+    hit         INT DEFAULT 0,
+    like_count  INT DEFAULT 0, -- 좋아요 개수 컬럼
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+-- 2. 좋아요 테이블 생성 (없으면 생성)
+CREATE TABLE IF NOT EXISTS Board_Like (
+    like_id     INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    board_id    INT NOT NULL,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_board (user_id, board_id), -- 중복 좋아요 방지
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (board_id) REFERENCES Board(board_id) ON DELETE CASCADE
+);
+
+-- [1] 리뷰 테이블 (사진 첨부 가능)
+CREATE TABLE Review (
+    review_id   INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    title       VARCHAR(200) NOT NULL,
+    content     TEXT,
+    thumbnail   VARCHAR(2048), -- 썸네일/대표사진 URL
+    hit         INT DEFAULT 0,
+    like_count  INT DEFAULT 0,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+-- [2] 리뷰 좋아요 테이블
+CREATE TABLE Review_Like (
+    like_id     INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    review_id   INT NOT NULL,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_review (user_id, review_id),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (review_id) REFERENCES Review(review_id) ON DELETE CASCADE
+);
+
+-- 1. Review 테이블에 trip_id 컬럼 추가
+ALTER TABLE Review ADD COLUMN trip_id INT DEFAULT NULL;
+
+-- 2. 외래키 설정 (여행 계획이 삭제되더라도 후기는 남기도록 ON DELETE SET NULL 권장, 혹은 같이 삭제하려면 CASCADE)
+ALTER TABLE Review ADD CONSTRAINT FK_Review_Trip 
+FOREIGN KEY (trip_id) REFERENCES Trip(trip_id) ON DELETE SET NULL;

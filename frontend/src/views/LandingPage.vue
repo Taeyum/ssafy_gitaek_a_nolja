@@ -13,12 +13,14 @@ import {
   Github,
   Instagram,
   Twitter,
+  Camera,
+  MessageSquare,
 } from "lucide-vue-next";
 import { useTripStore } from "@/stores/tripStore";
 import { useUserStore } from "@/stores/userStore";
 import AuthModal from "@/components/AuthModal.vue";
 
-const emit = defineEmits(["start", "my-page", "go-check"]);
+const emit = defineEmits(["start", "my-page", "go-check", "go-board"]);
 const tripStore = useTripStore();
 const userStore = useUserStore();
 
@@ -111,12 +113,24 @@ const handleJoinByCode = async () => {
         <nav class="flex items-center gap-4">
           <button
             v-if="userStore.isLoggedIn"
+            @click="emit('go-board')"
+            class="text-sm font-bold text-gray-600 hover:text-[#DE2E5F] transition-colors flex items-center gap-1"
+          >
+            <MessageSquare class="w-4 h-4" />
+            <span>커뮤니티</span>
+          </button>
+
+          <button
+            v-if="userStore.isLoggedIn"
             @click="emit('go-check')"
             class="text-sm font-bold text-gray-600 hover:text-[#DE2E5F] transition-colors flex items-center gap-1"
           >
             <!--숨겨진 기능 text-white: 너 이런 기능도 몰라? 하는 하나씩 오픈 베타를 재밌게 즐길 수 있는 기능 -> 고객 충성도를 올릴 수 있는 엄청난 기능.-->
             <span>체크리스트</span>
           </button>
+
+          
+
           <template v-if="!userStore.isLoggedIn">
             <button
               @click="openAuthModal('login')"

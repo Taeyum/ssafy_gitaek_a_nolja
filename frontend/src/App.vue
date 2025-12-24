@@ -7,6 +7,11 @@ import ProfileEdit from "@/views/ProfileEdit.vue";
 import AdminDashboard from "@/views/AdminDashboard.vue"; // ★ 관리자 페이지 import 확인!
 // [추가] 체크리스트 컴포넌트 가져오기
 import ChecklistView from "@/views/ChecklistView.vue";
+import BoardView from "@/views/BoardView.vue";
+// ★ [수정 1] 찐후기 페이지(ReviewView)를 가져오는 코드가 빠져있어서 추가했습니다!
+import ReviewView from "@/views/ReviewView.vue";
+import LikedReviewView from "@/views/LikedReviewView.vue"; // ★ [추가]
+
 
 import { useUserStore } from "@/stores/userStore";
 
@@ -18,6 +23,13 @@ onMounted(() => {
 
 // 현재 보여줄 화면 상태 (landing, planning, mypage, profile-edit, admin)
 const currentView = ref("landing");
+
+const previousView = ref("landing"); // 이전 화면 기억용
+
+const goToReview = (from) => {
+  previousView.value = from; // 어디서 왔는지 저장 ('landing' or 'board')
+  currentView.value = "review"; // 화면 전환
+};
 
 // ★ [추가 1] 현재 선택된 여행 ID (0이면 일반 체크리스트, 숫자가 있으면 여행용)
 const currentPlanId = ref(0);
@@ -48,6 +60,8 @@ const handleChecklistBack = () => {
       @start="currentView = 'planning'"
       @my-page="currentView = 'mypage'"
       @go-check="currentView = 'checklist'"
+      @go-board="currentView = 'board'"
+      @go-review="goToReview('landing')"
     />
 
     <PlanningDashboard
@@ -78,6 +92,25 @@ const handleChecklistBack = () => {
       v-else-if="currentView === 'checklist'"
       @back="currentView = 'landing'"
     />
+
+    <BoardView
+      v-else-if="currentView === 'board'"
+      @back="currentView = 'landing'"
+      @go-review="goToReview('board')"
+      @go-mypage="currentView = 'mypage'"
+      @go-liked-reviews="currentView = 'liked-reviews'"
+    />
+
+    <ReviewView
+      v-else-if="currentView === 'review'"
+      @back="currentView = previousView"
+    />
+
+    <LikedReviewView
+      v-else-if="currentView === 'liked-reviews'"
+      @back="currentView = 'board'"
+    />
+
   </Transition>
 </template>
 

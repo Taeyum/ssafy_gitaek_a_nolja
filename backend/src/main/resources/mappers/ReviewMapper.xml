@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.gitaek.mapper.ReviewMapper">
+
+	<select id="selectList"
+		resultType="com.ssafy.gitaek.dto.ReviewDto">
+		SELECT r.review_id AS reviewId,
+		r.title,
+		r.thumbnail,
+		r.hit,
+		r.like_count AS likeCount,
+		DATE_FORMAT(r.created_at, '%Y-%m-%d') AS createdAt,
+		u.nickname AS writerName,
+		r.user_id AS userId,
+		r.trip_id AS tripId, t.title AS tripTitle, (SELECT COUNT(*)
+		FROM Review_Like rl
+		WHERE rl.review_id = r.review_id
+		AND rl.user_id = #{userId}) AS isLiked
+
+		FROM Review r
+		JOIN Users u ON r.user_id = u.user_id
+		LEFT JOIN Trip t ON r.trip_id = t.trip_id ORDER BY r.review_id DESC
+	</select>
+
+	<select id="selectOne"
+		resultType="com.ssafy.gitaek.dto.ReviewDto">
+		SELECT r.review_id AS reviewId,
+		r.title,
+		r.content,
+		r.thumbnail,
+		r.hit,
+		r.like_count AS likeCount,
+		DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i') AS createdAt,
+		u.nickname AS writerName,
+		r.user_id AS userId,
+		r.trip_id AS tripId, t.title AS tripTitle FROM Review r
+		JOIN Users u ON r.user_id = u.user_id
+		LEFT JOIN Trip t ON r.trip_id = t.trip_id
+		WHERE r.review_id = #{reviewId}
+	</select>
+
+	<insert id="insertReview">
+		INSERT INTO Review (user_id, title, content, thumbnail, trip_id,
+		created_at)
+		VALUES (#{userId}, #{title}, #{content}, #{thumbnail},
+		<if test="tripId == 0">NULL</if>
+		<if test="tripId != 0">#{tripId}</if>
+		,
+		NOW())
+	</insert>
+
+	<update id="updateReview">
+		UPDATE Review
+		SET title = #{title},
+		content = #{content},
+		thumbnail = #{thumbnail},
+		trip_id =
+		<if test="tripId == 0">NULL</if>
+		<if test="tripId != 0">#{tripId}</if>
+		WHERE review_id = #{reviewId}
+	</update>
+
+	<delete id="deleteReview">
+		DELETE FROM Review WHERE review_id = #{reviewId}
+	</delete>
+
+	<update id="updateHit">
+		UPDATE Review SET hit = hit + 1 WHERE review_id =
+		#{reviewId}
+	</update>
+
+	<select id="checkLike" resultType="int">
+		SELECT COUNT(*) FROM
+		Review_Like WHERE review_id = #{reviewId} AND user_id = #{userId}
+	</select>
+
+	<insert id="insertLike">
+		INSERT INTO Review_Like (review_id, user_id) VALUES
+		(#{reviewId}, #{userId})
+	</insert>
+
+	<delete id="deleteLike">
+		DELETE FROM Review_Like WHERE review_id = #{reviewId}
+		AND user_id = #{userId}
+	</delete>
+
+	<update id="updateLikeCount">
+		UPDATE Review SET like_count = like_count + #{count}
+		WHERE review_id = #{reviewId}
+	</update>
+
+	<select id="selectLikedList"
+		resultType="com.ssafy.gitaek.dto.ReviewDto">
+		SELECT r.review_id AS reviewId,
+		r.title,
+		r.thumbnail,
+		r.hit,
+		r.like_count AS likeCount,
+		DATE_FORMAT(r.created_at, '%Y-%m-%d') AS createdAt,
+		u.nickname AS writerName,
+		r.user_id AS userId,
+		r.trip_id AS tripId,
+		t.title AS tripTitle,
+		1 AS isLiked FROM Review r
+		JOIN Review_Like rl ON r.review_id = rl.review_id
+		JOIN Users u ON r.user_id = u.user_id
+		LEFT JOIN Trip t ON r.trip_id = t.trip_id
+		WHERE rl.user_id = #{userId}
+		ORDER BY rl.created_at DESC
+	</select>
+
+
+</mapper>
