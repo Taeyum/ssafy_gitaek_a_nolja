@@ -21,7 +21,7 @@ public interface PoiMapper {
     PoiDto searchPoiByTitle(@Param("keyword") String keyword);
 
     // 특정 지역(키워드)의 관광지 이름 목록 조회 (AI 제공용)
-    List<String> findNamesByKeyword(@Param("keyword") String keyword);
+    List<PoiDto> findPoisByKeywordLimit(@Param("keyword") String keyword, @Param("limit") int limit);
 
     // 지도 영역(Bounds) 기반 검색
     List<PoiDto> getAttractionsByBounds(

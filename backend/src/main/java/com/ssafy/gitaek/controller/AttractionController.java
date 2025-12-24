@@ -63,7 +63,7 @@ public class AttractionController {
 
         // 3. 내용이 없거나, 에러 메시지가 저장되어 있다면 -> AI 다시 호출
         System.out.println(">>> AI 설명 재생성 요청: " + poi.getName());
-        String aiDesc = aiService.getPlaceDescription(poi.getName(), poi.getAddress());
+        String aiDesc = aiService.getPlaceDescription(poi.getName(), poi.getAddress(),poi.getContentTypeId());
 
         // 4. 제대로 된 응답일 때만 DB 업데이트
         if (!aiDesc.contains("실패") && !aiDesc.contains("오류")) {

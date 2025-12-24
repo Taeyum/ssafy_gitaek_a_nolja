@@ -18,5 +18,6 @@ public class TripScheduleDto {
     private Double placeLng;
     // ★ [이 부분이 빠져 있어서 사진을 못 가져왔습니다! 추가해주세요]
     private String thumbnailUrl;
+    private String duration;
+    private String travelTime;
 }
-

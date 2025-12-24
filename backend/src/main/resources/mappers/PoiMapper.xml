@@ -13,7 +13,7 @@
     </insert>
 
     <select id="selectPois" parameterType="int" resultType="com.ssafy.gitaek.dto.PoiDto">
-        SELECT poi_id, name, description, address, latitude, longitude, thumbnail_url, region_id
+        SELECT poi_id, name, description, address, latitude, longitude, thumbnail_url, region_id, content_type_id
         FROM POI
         <where>
             <if test="regionId != 0">
@@ -39,19 +39,20 @@
     </select>
 
     <select id="findNamesByKeyword" resultType="string">
-        SELECT name
-        FROM POI
-        WHERE address LIKE CONCAT('%', #{keyword}, '%')
-        LIMIT 80
+        SELECT name FROM POI WHERE address LIKE CONCAT('%', #{keyword}, '%') LIMIT 300
     </select>
 
     <select id="getAttractionsByBounds" resultType="com.ssafy.gitaek.dto.PoiDto">
-        SELECT *
-        FROM POI
+        SELECT * FROM POI
         WHERE latitude BETWEEN #{minLat} AND #{maxLat}
         AND longitude BETWEEN #{minLng} AND #{maxLng}
         <if test="contentTypeId > 0">
             AND content_type_id = #{contentTypeId}
         </if>
-        LIMIT 100 </select>
+        LIMIT 100
+    </select>
+
+    <select id="findPoisByKeywordLimit" resultType="com.ssafy.gitaek.dto.PoiDto">
+        SELECT * FROM POI WHERE address LIKE CONCAT(#{keyword}, '%') LIMIT #{limit}
+    </select>
 </mapper>

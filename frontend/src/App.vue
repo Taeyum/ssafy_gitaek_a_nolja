@@ -19,7 +19,6 @@ const userStore = useUserStore();
 
 onMounted(() => {
   userStore.checkLoginStatus();
-});
 
 // 현재 보여줄 화면 상태 (landing, planning, mypage, profile-edit, admin)
 const currentView = ref("landing");
@@ -34,6 +33,21 @@ const goToReview = (from) => {
 // ★ [추가 1] 현재 선택된 여행 ID (0이면 일반 체크리스트, 숫자가 있으면 여행용)
 const currentPlanId = ref(0);
 
+  // 중복 로딩 방지
+  if (!document.getElementById("kakao-map-script")) {
+    const script = document.createElement("script");
+    script.id = "kakao-map-script";
+    
+    // ★ [핵심 수정] autoload=false를 다시 넣어야 합니다!
+    // libraries=... 앞에 &autoload=false 추가
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}&libraries=services,clusterer,drawing`;
+    
+    script.onload = () => console.log("✅ 카카오 스크립트 로드 완료 (대기 모드)");
+    document.head.appendChild(script);
+    }
+  });
+  const currentView = ref("landing");
+
 // ★ [추가 2] 체크리스트로 이동하는 함수 (ID 설정 + 화면 전환)
 const goChecklist = (planId = 0) => {
   currentPlanId.value = planId;
@@ -45,9 +59,7 @@ const handleChecklistBack = () => {
   // 일반 리스트였으면 -> 메인(landing)으로
   if (currentPlanId.value === 0) {
     currentView.value = "landing";
-  }
-  // 여행용 리스트였으면 -> 여행 계획 목록(planning)으로
-  else {
+  } else {
     currentView.value = "planning";
   }
 };
