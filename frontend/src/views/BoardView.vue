@@ -114,7 +114,7 @@ const handleUserScroll = (e) => {
 const connectSocket = () => {
   if (!userStore.isLoggedIn) return;
 
-  const socket = new SockJS("http://localhost:8080/ws-stomp");
+  const socket = new SockJS("https://gitaek.duckdns.org/ws-stomp");
   stompClient = Stomp.over(socket);
   stompClient.debug = () => {}; 
 

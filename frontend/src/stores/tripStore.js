@@ -67,7 +67,7 @@ export const useTripStore = defineStore("trip", () => {
     // 이미 연결되어 있다면 중복 연결 방지
     if (stompClient && stompClient.connected) return;
 
-    const socket = new SockJS('http://localhost:8080/ws-stomp');
+    const socket = new SockJS('https://gitaek.duckdns.org/ws-stomp');
     stompClient = Stomp.over(socket);
     stompClient.debug = () => {}; // 콘솔 로그 끄기
 
