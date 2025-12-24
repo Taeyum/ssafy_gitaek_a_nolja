@@ -54,8 +54,8 @@ const list = ref([]); // 전체 게시판 글
 const reviews = ref([]); 
 
 //1224
-//const currentPost = ref({});
-const currentCategory = ref("all");
+const currentPost = ref({});
+// const currentCategory = ref("all");
 
 const form = ref({ title: "", content: "" });
 

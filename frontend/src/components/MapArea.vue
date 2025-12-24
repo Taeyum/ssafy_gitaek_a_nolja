@@ -46,21 +46,21 @@
   // 🗺️ 지도 초기화 및 이벤트
   // ==========================================
   onMounted(() => {
-  // 1. 카카오 객체가 들어왔는지 0.1초마다 감시
-  const interval = setInterval(() => {
-    // window.kakao가 있고, 그 안에 maps가 있다면?
-    if (window.kakao && window.kakao.maps) {
-      clearInterval(interval);
-      console.log("📦 카카오 객체 감지됨! 포장 뜯기 시작(load)...");
-
-      // 2. ★ autoload=false일 때는 반드시 이 load 함수 안에서 지도를 그려야 합니다.
-      window.kakao.maps.load(() => {
-        console.log("🎉 포장 뜯기 완료! 지도 그리기 시작");
-        initMap(); // 이제 LatLng를 써도 에러가 안 납니다.
-      });
-    }
-  }, 100);
-});
+    // 1. 카카오 객체가 들어왔는지 0.1초마다 감시
+    const interval = setInterval(() => {
+      // window.kakao가 있고, 그 안에 maps가 있다면?
+      if (window.kakao && window.kakao.maps) {
+        clearInterval(interval);
+        console.log("📦 카카오 객체 감지됨! 포장 뜯기 시작(load)...");
+  
+        // 2. ★ autoload=false일 때는 반드시 이 load 함수 안에서 지도를 그려야 합니다.
+        window.kakao.maps.load(() => {
+          console.log("🎉 포장 뜯기 완료! 지도 그리기 시작");
+          initMap(); // 이제 LatLng를 써도 에러가 안 납니다.
+        });
+      }
+    }, 100);
+  });
   
   onUnmounted(() => {
     window.removeEventListener('add-place-map', handleAddPlaceEvent)
@@ -84,7 +84,7 @@
     window.kakao.maps.event.addListener(mapInstance, 'zoom_changed', onMapIdle)
     window.kakao.maps.event.addListener(mapInstance, 'click', () => {
       if (activeInfoWindow) {
-        activeInfoWindow.close()
+        activeInfoWindow.setMap(null)
         activeInfoWindow = null
       }
       emit('map-clicked')
@@ -281,20 +281,50 @@
         if (!place.description) {
            try {
               const descEl = content.querySelector('.ai-desc');
+              
+              // 1. 서버 요청
               const res = await http.get(`/attractions/${place.poiId}/description`);
-              const aiText = res.data;
-              place.description = aiText;
+              console.log("📦 AI 응답 데이터 확인:", res.data); // 콘솔에서 구조 확인용
+
+              // 2. 데이터 정제 (무조건 문자열로 변환)
+              let finalDesc = "";
+
+              if (typeof res.data === 'string') {
+                  // 그냥 문자열이면 바로 씀
+                  finalDesc = res.data;
+              } else if (typeof res.data === 'object' && res.data !== null) {
+                  // 객체라면 'description' 키를 꺼냄 (없으면 'message' 등 확인)
+                  if (res.data.description) {
+                      finalDesc = res.data.description;
+                  } else {
+                      // 만약 description 키가 없다면 강제로 문자열로 풀어서 보여줌 (디버깅용)
+                      finalDesc = JSON.stringify(res.data); 
+                  }
+              } else {
+                  finalDesc = "설명 데이터가 없습니다.";
+              }
+
+              // 3. 화면 적용 (이제 finalDesc는 무조건 문자열이라 에러 안 남)
+              place.description = finalDesc;
               
               descEl.style.opacity = 0;
-              descEl.innerHTML = aiText.replace(/\n/g, '<br>');
+              // replace는 문자열에만 쓸 수 있음 (안전장치 추가)
+              descEl.innerHTML = String(finalDesc).replace(/\n/g, '<br>');
+              
               let op = 0.1;
               let timer = setInterval(() => {
                   if (op >= 1) clearInterval(timer);
                   descEl.style.opacity = op;
                   op += 0.1;
               }, 20);
+
            } catch (e) {
-              console.error(e);
+              console.error("AI 로딩 에러:", e);
+              const descEl = content.querySelector('.ai-desc');
+              if (descEl) {
+                  descEl.innerHTML = "<span style='color:red;'>⚠️ AI 요약 실패</span>";
+                  descEl.style.opacity = 1;
+              }
            }
         }
       });
