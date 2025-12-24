@@ -72,7 +72,7 @@ public class SecurityConfig {
 		CorsConfiguration config = new CorsConfiguration();
 
 		// 프론트엔드 주소 (Vite 기본 포트)
-		config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+		config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000", "https://gitaek.vercel.app"));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true);
